@@ -10,8 +10,8 @@ import numpy as np
 # --------------------------------------------------------------------
 
 class Processor:
-    def __init__(self):
-        self.rank = -1
+    def __init__(self, rank):
+        self.rank = rank
         self.members = []   ### 所属粒子
         self.neighbors = []   ### シミュレーション上で隣接するプロセッサ
         self.boundaries = []   ### 
@@ -263,3 +263,10 @@ class System:
 
     def get_comm_max(self):
         return np.max(self.commtable)
+
+class Computer:
+    def __init__(self, num_of_procs):
+        self.procs = []
+        for i in range(num_of_procs):
+            P = Processor(i)
+            self.procs.append(P)
