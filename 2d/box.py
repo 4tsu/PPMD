@@ -9,7 +9,7 @@
 ## シミュレーションボックスを定義するクラス
 ### すべてのプロセスで共有される最低限の情報を持つ
 ### lengthsは要素数2の配列[lx,ly]であり、ボックスの寸法を表す
-class simulation_box:
+class SimulationBox:
     def __init__(self, lengths):
         xl = lengths[0]
         yl = lengths[1]
