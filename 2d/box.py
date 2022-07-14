@@ -11,13 +11,15 @@ random.seed(1)
 ### lengthsは要素数2の配列[lx,ly]であり、ボックスの寸法を表す
 class SimulationBox:
     def __init__(self, lengths, cutoff):
-        xl = lengths[0]
-        yl = lengths[1]
-        x_max =  xl/2
-        x_min = -xl/2
-        y_max =  yl/2
-        y_min = -yl/2
+        self.xl = lengths[0]
+        self.yl = lengths[1]
+        self.x_max =  self.xl/2
+        self.x_min = -self.xl/2
+        self.y_max =  self.yl/2
+        self.y_min = -self.yl/2
+        
         self.cutoff = cutoff
+        self.particles = []
 
     ## 周期境界条件の適用
     def periodic_coordinate(self, x, y):
@@ -36,6 +38,9 @@ class SimulationBox:
         rx = min((x1-x2)**2, (xl-abs(x1-x2))**2)
         ry = min((y1-y2)**2, (yl-abs(y1-y2))**2)
         return (rx + ry)**0.5
+    
+    def add_particle(self, particle):
+        self.particles.append(particle)
     
 # ----------------------------------------------------
 def periodic(proc):
