@@ -2,14 +2,15 @@
 ## 並列シミュレーション時の空間分割手法コード
 ## ロードバランサー
 # ===============================================================================================================================
+from envs import System, Processor
+
 from itertools import count
 from locale import ABDAY_1
+import matplotlib.pyplot as plt
 from matplotlib.pyplot import axis
 import numpy as np
 from numpy.lib.function_base import average
-import matplotlib.pyplot as plt
 from numba import jit
-from systm import System, Processor
 from math import ceil
 
 # --------------------------------------------------------------------------------------------------------------------------------

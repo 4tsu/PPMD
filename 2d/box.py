@@ -38,8 +38,10 @@ class SimulationBox:
         return (rx + ry)**0.5
     
 # ----------------------------------------------------
+def periodic(proc):
+    pass
 
-def export():
+def export(proc):
     pass
 
 def kinetic_energy():

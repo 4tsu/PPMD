@@ -9,16 +9,16 @@ def make_conf():
 
 
 
-def set_initial_velocity():
+def set_initial_velocity(proc):
     pass
 
 
 
-def calculate_force():
+def calculate_force(proc):
     pass
 
 
 
-def update_position():
+def update_position(proc):
     pass
 # ---------------------------------------------------

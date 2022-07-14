@@ -36,8 +36,8 @@ for step in range(STEPS):
         sim.update_position(proc)
         sim.calculate_force(proc)
         sim.update_position(proc)
-        periodic(proc)
-        sim.export(proc)   ### 情報の出力
+        box.periodic(proc)
+        box.export(proc)   ### 情報の出力
         t += dt
-
+    # Computer.communicate()   ### 1stepの計算が全て終わったら、同期通信をする
 print('*** Simulation Ended! ***')
