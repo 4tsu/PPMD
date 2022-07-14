@@ -38,7 +38,8 @@ for step in range(STEPS):
         sim.calculate_force(proc)
         sim.update_position(proc)
         box.periodic(proc)
-        box.export(proc)   ### 情報の出力
+        if step % OB_INTERVAL == 0:
+            box.export_cdview(Box, step)   ### 情報の出力
         t += dt
     # Computer.communicate()   ### 1stepの計算が全て終わったら、同期通信をする
 print('*** Simulation Ended! ***')

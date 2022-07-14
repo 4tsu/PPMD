@@ -46,8 +46,13 @@ class SimulationBox:
 def periodic(proc):
     pass
 
-def export(proc):
-    pass
+def export_cdview(Box, step):
+    filename = 'conf{:0=4}.cdv'.format(step)
+    with open(filename, 'w') as f:
+        for i,p in enumerate(Box.particles):
+            f.write('{} 0 {} {} 0\n'.format(p.id, p.x, p.y))
+
+
 
 def kinetic_energy():
     pass
