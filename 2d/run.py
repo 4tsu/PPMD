@@ -26,7 +26,8 @@ Computer = envs.Computer(1)   ### 並列プロセス数
 
 ## シミュレーションする系の準備
 Box = box.SimulationBox([10, 10], 2.0)
-sim.make_conf(N, Box)
+Box = sim.make_conf(N, Box)
+Box = sim.set_initial_velocity(1.0, Box)
 
 ## ループ
 t = 0

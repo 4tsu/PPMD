@@ -4,6 +4,7 @@
 import particle
 import box
 
+from math import pi, sin, cos
 import random
 
 random.seed(1)
@@ -24,8 +25,24 @@ def make_conf(N, Box):
 
 
 
-def set_initial_velocity(proc):
-    pass
+def set_initial_velocity(v0, Box):
+    avx = 0.0
+    avy = 0.0
+    for i, p in enumerate(Box.particles):
+        theta = random.random() * 2.0 * pi
+        vx = v0 * cos(theta)
+        vy = v0 * sin(theta)
+        p.vx = vx
+        p.vy = vy
+        Box.particles[i] = p
+        avx += vx
+        avy += vy
+    avx /= len(Box.particles)
+    avy /= len(Box.particles)
+    for i in range(len(Box.particles)):
+        Box.particles[i].vx -= avx
+        Box.particles[i].vy -= avy
+    return Box
 
 
 
