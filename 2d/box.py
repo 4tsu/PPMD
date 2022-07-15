@@ -21,6 +21,8 @@ class SimulationBox:
         self.cutoff = cutoff
         self.particles = []
 
+        self.Potential = Potential()
+
     ## 周期境界条件の適用
     def periodic_coordinate(self, x, y):
         if x > self.x_max:
@@ -35,13 +37,46 @@ class SimulationBox:
     
     ## 周期境界条件を考慮した距離を返す
     def periodic_distance(self, x1, y1, x2, y2):
-        rx = min((x1-x2)**2, (xl-abs(x1-x2))**2)
-        ry = min((y1-y2)**2, (yl-abs(y1-y2))**2)
+        rx = min((x1-x2)**2, (self.xl-abs(x1-x2))**2)
+        ry = min((y1-y2)**2, (self.yl-abs(y1-y2))**2)
         return (rx + ry)**0.5
     
     def add_particle(self, particle):
         self.particles.append(particle)
+
+    def kinetic_energy(self):
+        k = 0
+        for p in self.particles:
+            k += p.vx
+            k += p.vy
+        k /= len(self.particles)
+        k /= 2
+        return k
     
+    def potential_energy(self):
+        v = 0
+        for i in range(len(self.particles)-1):
+            for j in range(i+1, len(self.particles)):
+                ip = self.particles[i]
+                jp = self.particles[j]
+                r = self.periodic_distance(ip.x, ip.y, jp.x, jp.y)
+                if r > self.cutoff:
+                    continue
+                v += self.Potential.potential(r) - 4.0*(1/self.cutoff**12 - 1/self.cutoff**6) 
+        v /= len(self.particles)
+        return v
+
+## ポテンシャル記述クラス
+### 将来的にはこれを継承したユーザー定義クラスの使用を想定
+### もしくはよく使うポテンシャルクラスを一通り実装しておく
+class Potential:
+    epsilon = 4.0
+    rho     = 1.0
+
+    def potential(self, r):
+        v = self.epsilon * (self.rho/r**12 - self.rho/r**6)
+        return v
+
 # ----------------------------------------------------
 def periodic(proc):
     pass
@@ -52,10 +87,4 @@ def export_cdview(Box, step):
         for i,p in enumerate(Box.particles):
             f.write('{} 0 {} {} 0\n'.format(p.id, p.x, p.y))
 
-
-
-def kinetic_energy():
-    pass
-
-def potential_energy():
-    pass
+# ==============================================================

@@ -9,6 +9,7 @@ import box
 import sdd
 import sim
 
+import sys
 import random
 
 random.seed(1)
@@ -16,10 +17,10 @@ random.seed(1)
 # ------------------------------------------------------
 
 ## シミュレーションパラメータの設定
-STEPS = 1000
+STEPS = 100
 OB_INTERVAL = 100
 dt = 0.001
-N = 300
+N = 100
 
 ## シミュレーション環境の準備
 Computer = envs.Computer(1)   ### 並列プロセス数
@@ -40,6 +41,9 @@ for step in range(STEPS):
         box.periodic(proc)
         if step % OB_INTERVAL == 0:
             box.export_cdview(Box, step)   ### 情報の出力
-        t += dt
+    k = Box.kinetic_energy()
+    v = Box.potential_energy()
+    print('{:10.5f} {} {} {}'.format(t, k, v, k+v))
+    t += dt
     # Computer.communicate()   ### 1stepの計算が全て終わったら、同期通信をする
-print('*** Simulation Ended! ***')
+print('*** Simulation Ended! ***', file=sys.stderr)
