@@ -35,9 +35,9 @@ t = 0
 for step in range(STEPS):
     for proc in Computer.procs:
         ### 計算本体(シンプレクティック積分)
-        sim.update_position(proc)
-        sim.calculate_force(proc)
-        sim.update_position(proc)
+        Box = sim.update_position(Box)
+        Box = sim.calculate_force(Box, dt)
+        Box = sim.update_position(Box)
         box.periodic(proc)
         if step % OB_INTERVAL == 0:
             box.export_cdview(Box, step)   ### 情報の出力

@@ -29,7 +29,7 @@ def make_conf(N, Box):
     return Box
 
 
-
+## 初速の大きさだけ受け取って、ランダムな方向に向ける
 def set_initial_velocity(v0, Box):
     avx = 0.0
     avy = 0.0
@@ -51,11 +51,42 @@ def set_initial_velocity(v0, Box):
 
 
 
-def calculate_force(proc):
-    pass
+## 一方向についての、周期境界を考慮した距離
+def periodic_od(L,dx):
+    LH = L/2
+    if dx < -LH:
+        dx += L
+    elif dx > LH:
+        dx -= L
+    return dx
 
 
 
-def update_position(proc):
-    pass
+## 力の計算
+def calculate_force(Box, dt):
+    for i in range(len(Box.particles)-1):
+        for j in range(i+1, len(Box.particles)):
+            ip = Box.particles[i]
+            jp = Box.particles[j]
+            r = Box.periodic_distance(ip.x, ip.y, jp.x, jp.y)
+            if r > Box.cutoff:
+                continue
+            df = (24.0 * r**6 - 48.0) / r**14 * dt
+
+            dx = periodic_od(Box.xl,ip.x-jp.x)
+            dy = periodic_od(Box.yl,ip.y-jp.y)
+            ip.vx += df * dx
+            ip.vy += df * dy
+            jp.vx -= df * dx
+            jp.vy -= df * dy
+            Box.particles[i] = ip
+            Box.particles[j] = jp
+    return Box
+
+
+
+
+
+def update_position(Box):
+    return Box
 # ---------------------------------------------------
