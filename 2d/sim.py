@@ -4,7 +4,7 @@
 import particle
 import box
 
-from math import pi, sin, cos
+from math import pi, sin, cos, ceil, sqrt
 import random
 
 random.seed(1)
@@ -16,9 +16,14 @@ def make_conf(N, Box):
     yl = Box.yl
     x_min = Box.x_min
     y_min = Box.y_min
+    xppl = ceil(N/yl)
+    yppl = ceil(N/xl)
+    pitch = xl/xppl
     for i in range(N):
-        x = random.random()*xl - x_min
-        y = random.random()*yl - y_min
+        iy = i//xppl
+        ix = i%xppl
+        x = ix*pitch
+        y = iy*pitch
         Particle = particle.Particle(i,x,y)
         Box.particles.append(Particle)
     return Box
