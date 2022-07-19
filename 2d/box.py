@@ -47,8 +47,8 @@ class SimulationBox:
     def kinetic_energy(self):
         k = 0
         for p in self.particles:
-            k += p.vx
-            k += p.vy
+            k += p.vx ** 2
+            k += p.vy ** 2
         k /= len(self.particles)
         k /= 2
         return k

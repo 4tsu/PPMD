@@ -73,8 +73,8 @@ def calculate_force(Box, dt):
                 continue
             df = (24.0 * r**6 - 48.0) / r**14 * dt
 
-            dx = periodic_od(Box.xl,ip.x-jp.x)
-            dy = periodic_od(Box.yl,ip.y-jp.y)
+            dx = periodic_od(Box.xl,jp.x-ip.x)
+            dy = periodic_od(Box.yl,jp.y-ip.y)
             ip.vx += df * dx
             ip.vy += df * dy
             jp.vx -= df * dx
