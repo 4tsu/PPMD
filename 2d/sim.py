@@ -85,8 +85,11 @@ def calculate_force(Box, dt):
 
 
 
-
-
-def update_position(Box):
+def update_position(Box, dt):
+    dt_half = dt * 0.5
+    for i,p in enumerate(Box.particles):
+        p.x += p.vx * dt_half
+        p.y += p.vy * dt_half
+        Box.particles[i] = p
     return Box
 # ---------------------------------------------------

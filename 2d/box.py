@@ -78,8 +78,12 @@ class Potential:
         return v
 
 # ----------------------------------------------------
-def periodic(proc):
-    pass
+def periodic(Box):
+    for i in range(len(Box.particles)):
+        x, y = Box.periodic_coordinate(Box.particles[i].x, Box.particles[i].y)
+        Box.particles[i].x = x
+        Box.particles[i].y = y
+    return Box
 
 def export_cdview(Box, step):
     filename = 'conf{:0=4}.cdv'.format(step)

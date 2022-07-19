@@ -35,10 +35,10 @@ t = 0
 for step in range(STEPS):
     for proc in Computer.procs:
         ### 計算本体(シンプレクティック積分)
-        Box = sim.update_position(Box)
+        Box = sim.update_position(Box, dt)
         Box = sim.calculate_force(Box, dt)
-        Box = sim.update_position(Box)
-        box.periodic(proc)
+        Box = sim.update_position(Box, dt)
+        Box = box.periodic(Box)
         if step % OB_INTERVAL == 0:
             box.export_cdview(Box, step)   ### 情報の出力
     k = Box.kinetic_energy()
