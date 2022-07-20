@@ -10,6 +10,7 @@ import sdd
 import sim
 
 import sys
+import os
 import random
 
 random.seed(1)
@@ -31,19 +32,30 @@ Machine.set_boxes(Box)   ### シミュレーションボックスのグローバ
 Machine = sim.make_conf(Machine)   ### 初期配置
 Machine = sim.set_initial_velocity(1.0, Machine)   ### 初速
 
+## 粒子の軌跡出力準備
+### export_cdviewが上書き方式なので、.cdvファイルを事前にクリアしておく
+for filename in os.listdir("."):
+    if '.cdv' in filename:
+        os.remove(filename)
+for proc in Machine.procs:
+    sim.export_cdview(proc, 0)
+
 ## ループ
 t = 0
 for step in range(STEPS):
-    for proc in Machine.procs:
+    k = 0
+    v = 0
+    for i,proc in enumerate(Machine.procs):
         ### 計算本体(シンプレクティック積分)
-        Box = sim.update_position(Box, dt)
-        Box = sim.calculate_force(Box, dt)
-        Box = sim.update_position(Box, dt)
-        Box = box.periodic(Box)
-        if step % OB_INTERVAL == 0:
-            box.export_cdview(Box, step)   ### 情報の出力
-    k = Box.kinetic_energy()
-    v = Box.potential_energy()
+        proc = sim.update_position(proc, dt)
+        proc = sim.calculate_force(proc, dt)
+        proc = sim.update_position(proc, dt)
+        proc = box.periodic(proc)
+        Machine.procs[i] = proc
+        if step+1 % OB_INTERVAL == 0:
+            sim.export_cdview(proc, step)   ### 情報の出力
+        k += box.kinetic_energy(proc)
+        v += box.potential_energy(proc)
     print('{:10.5f} {} {} {}'.format(t, k, v, k+v))
     t += dt
     # Machine.communicate()   ### 1stepの計算が全て終わったら、同期通信をする

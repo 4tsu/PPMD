@@ -44,27 +44,7 @@ class SimulationBox:
     def add_particle(self, particle):
         self.particles.append(particle)
 
-    def kinetic_energy(self):
-        k = 0
-        for p in self.particles:
-            k += p.vx ** 2
-            k += p.vy ** 2
-        k /= len(self.particles)
-        k /= 2
-        return k
-    
-    def potential_energy(self):
-        v = 0
-        for i in range(len(self.particles)-1):
-            for j in range(i+1, len(self.particles)):
-                ip = self.particles[i]
-                jp = self.particles[j]
-                r = self.periodic_distance(ip.x, ip.y, jp.x, jp.y)
-                if r > self.cutoff:
-                    continue
-                v += self.Potential.potential(r) - 4.0*(1/self.cutoff**12 - 1/self.cutoff**6) 
-        v /= len(self.particles)
-        return v
+
 
 ## ポテンシャル記述クラス
 ### 将来的にはこれを継承したユーザー定義クラスの使用を想定
@@ -78,17 +58,33 @@ class Potential:
         return v
 
 # ----------------------------------------------------
-def periodic(Box):
-    for i in range(len(Box.particles)):
-        x, y = Box.periodic_coordinate(Box.particles[i].x, Box.particles[i].y)
-        Box.particles[i].x = x
-        Box.particles[i].y = y
-    return Box
+def periodic(proc):
+    for i in range(len(proc.particles)):
+        x, y = proc.Box.periodic_coordinate(proc.particles[i].x, proc.particles[i].y)
+        proc.particles[i].x = x
+        proc.particles[i].y = y
+    return proc
 
-def export_cdview(Box, step):
-    filename = 'conf{:0=4}.cdv'.format(step)
-    with open(filename, 'w') as f:
-        for i,p in enumerate(Box.particles):
-            f.write('{} 0 {} {} 0\n'.format(p.id, p.x, p.y))
+def kinetic_energy(proc):
+    k = 0
+    for p in proc.particles:
+        k += p.vx ** 2
+        k += p.vy ** 2
+    k /= len(proc.particles)
+    k /= 2
+    return k
+
+def potential_energy(proc):
+    v = 0
+    for i in range(len(proc.particles)-1):
+        for j in range(i+1, len(proc.particles)):
+            ip = proc.particles[i]
+            jp = proc.particles[j]
+            r = proc.Box.periodic_distance(ip.x, ip.y, jp.x, jp.y)
+            if r > proc.Box.cutoff:
+                continue
+            v += proc.Box.Potential.potential(r) - 4.0*(1/proc.Box.cutoff**12 - 1/proc.Box.cutoff**6) 
+    v /= len(proc.particles)
+    return v
 
 # ==============================================================

@@ -72,11 +72,12 @@ def periodic_od(L,dx):
 
 
 ## 力の計算
-def calculate_force(Box, dt):
-    for i in range(len(Box.particles)-1):
-        for j in range(i+1, len(Box.particles)):
-            ip = Box.particles[i]
-            jp = Box.particles[j]
+def calculate_force(proc, dt):
+    Box = proc.Box
+    for i in range(len(proc.particles)-1):
+        for j in range(i+1, len(proc.particles)):
+            ip = proc.particles[i]
+            jp = proc.particles[j]
             r = Box.periodic_distance(ip.x, ip.y, jp.x, jp.y)
             if r > Box.cutoff:
                 continue
@@ -88,17 +89,26 @@ def calculate_force(Box, dt):
             ip.vy += df * dy
             jp.vx -= df * dx
             jp.vy -= df * dy
-            Box.particles[i] = ip
-            Box.particles[j] = jp
-    return Box
+            proc.particles[i] = ip
+            proc.particles[j] = jp
+    return proc
 
 
 
-def update_position(Box, dt):
+def update_position(proc, dt):
     dt_half = dt * 0.5
-    for i,p in enumerate(Box.particles):
+    for i,p in enumerate(proc.particles):
         p.x += p.vx * dt_half
         p.y += p.vy * dt_half
-        Box.particles[i] = p
-    return Box
+        proc.particles[i] = p
+    return proc
+
+## 可視化ソフトcdview用のダンプ出力
+### 並列化のため上書き形式
+def export_cdview(proc, step):
+    filename = 'conf{:0=4}.cdv'.format(step)
+    with open(filename, 'a') as f:
+        for i,p in enumerate(proc.particles):
+            f.write('{} 0 {} {} 0\n'.format(p.id, p.x, p.y))
+
 # ---------------------------------------------------
