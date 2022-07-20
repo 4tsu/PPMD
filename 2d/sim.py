@@ -19,6 +19,8 @@ def make_conf(Machine):
     yl = Box.yl
     x_min = Box.x_min
     y_min = Box.y_min
+    x_max = Box.x_max
+    y_max = Box.y_max
     xppl = ceil(N/yl)
     yppl = ceil(N/xl)
     pitch = xl/xppl
@@ -27,10 +29,12 @@ def make_conf(Machine):
         for j in range(N):
             jy = j//xppl
             jx = j%xppl
-            x = jx*pitch
-            y = jy*pitch
+            x = jx*pitch + x_min
+            y = jy*pitch + y_min
             Particle = particle.Particle(j,x,y)
             Machine.procs[i].particles.append(Particle)
+            assert x_min <= x < x_max, '初期配置が適切ではありません'
+            assert y_min <= y < y_max, '初期配置が適切ではありません'
         
     return Machine
 
