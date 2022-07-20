@@ -10,7 +10,7 @@ random.seed(1)
 ### すべてのプロセスで共有される最低限の情報を持つ
 ### lengthsは要素数2の配列[lx,ly]であり、ボックスの寸法を表す
 class SimulationBox:
-    def __init__(self, lengths, cutoff):
+    def __init__(self, lengths, cutoff, N):
         self.xl = lengths[0]
         self.yl = lengths[1]
         self.x_max =  self.xl/2
@@ -19,7 +19,7 @@ class SimulationBox:
         self.y_min = -self.yl/2
         
         self.cutoff = cutoff
-        self.particles = []
+        self.N = N
 
         self.Potential = Potential()
 

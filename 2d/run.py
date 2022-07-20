@@ -23,13 +23,15 @@ dt = 0.0010
 N = 100
 
 ## シミュレーション環境の準備
-Computer = envs.Computer(1)   ### 並列プロセス数
+Machine = envs.Machine(1)   ### 並列プロセス数
 
 ## シミュレーションする系の準備
-Box = box.SimulationBox([10, 10], 2.0)
-Box = sim.make_conf(N, Box)
-Box = sim.set_initial_velocity(1.0, Box)
-
+Box = box.SimulationBox([10, 10], 2.0, N)
+Machine.set_boxes(Box)
+Machine = sim.make_conf(Machine)
+Machine = sim.set_initial_velocity(1.0, Machine)
+print(len(Machine.procs[0].particles))
+"""
 ## ループ
 t = 0
 for step in range(STEPS):
@@ -47,3 +49,4 @@ for step in range(STEPS):
     t += dt
     # Computer.communicate()   ### 1stepの計算が全て終わったら、同期通信をする
 print('*** Simulation Ended! ***', file=sys.stderr)
+"""

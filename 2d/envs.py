@@ -12,15 +12,19 @@ import numpy as np
 class Processor:
     def __init__(self, rank):
         self.rank = rank
-        self.members = []   ### 所属粒子
+        self.particles = []   ### 所属粒子
         self.neighbors = []   ### シミュレーション上で隣接するプロセッサ
+        self.packets = []   ### 通信時に送信する情報を詰めておく
+        self.receivebox= []   ### 通信時に受信するポスト
+        
         self.boundaries = []   ### 
         self.center = []
-        self.packets = []
-        self.receivebox= []
+    
+    def set_box(self, Box):
+        self.Box = Box
     
     def calc_center(self, xi, yi):
-        Q = self.members
+        Q = self.particles
         if not len(Q) == 0:
             sx = 0
             sy = 0
@@ -122,12 +126,12 @@ class System:
     def detect_neighbors(self, cutoff):
         for i,p in enumerate(self.Processors):
             self.Processors[i].neighbors.clear()
-            pr = random.sample(p.members, len(p.members))
+            pr = random.sample(p.particles, len(p.particles))
             for j,q in enumerate(self.Processors):
                 if i == j:
                     continue
                 flag = False
-                qr = random.sample(q.members, len(q.members))
+                qr = random.sample(q.particles, len(q.particles))
                 for m in pr:
                     for n in qr:
                         r = periodic_distance(m[0], m[1], n[0], n[1])
@@ -142,12 +146,12 @@ class System:
     def detect_adjacent(self, cutoff):
         for i,p in enumerate(self.Processors):
             self.Processors[i].neighbors.clear()
-            pr = random.sample(p.members, len(p.members))
+            pr = random.sample(p.particles, len(p.particles))
             for j,q in enumerate(self.Processors):
                 if i == j:
                     continue
                 flag = False
-                qr = random.sample(q.members, len(q.members))
+                qr = random.sample(q.particles, len(q.particles))
                 for m in pr:
                     for n in qr:
                         r = ((m[0]-n[0])**2 + (m[1]-n[1])**2)**0.5
@@ -187,8 +191,8 @@ class System:
             for j in p.neighbors:
                 q = self.Processors[j]
                 packlist = []
-                for k,m in enumerate(p.members):
-                    for n in q.members:
+                for k,m in enumerate(p.particles):
+                    for n in q.particles:
                         r = periodic_distance(m[0], m[1], n[0], n[1])
                         if r < cutoff:
                             packlist.append(k)
@@ -215,7 +219,7 @@ class System:
     def reallocate(self, data):
         D = data
         for i,p in enumerate(self.Processors):
-            self.Processors[i].members.clear()
+            self.Processors[i].particles.clear()
             B = p.boundaries
             M = []
             ctr = p.center
@@ -229,13 +233,13 @@ class System:
                         break
                 if flag == True:
                     M.append(j)
-                    self.Processors[i].members.append([x, y, D[2][j]])
+                    self.Processors[i].particles.append([x, y, D[2][j]])
             D = np.delete(D, M, 1)
             
     def count(self):
         counts = []
         for p in self.Processors:
-            counts.append(len(p.members))
+            counts.append(len(p.particles))
         return counts
 
     def calc_all_perimeter(self):
@@ -264,9 +268,14 @@ class System:
     def get_comm_max(self):
         return np.max(self.commtable)
 
-class Computer:
+class Machine:
     def __init__(self, num_of_procs):
         self.procs = []
         for i in range(num_of_procs):
             P = Processor(i)
             self.procs.append(P)
+
+    ### すべてのプロセッサでシミュレーションボックスのグローバルな設定を共有する
+    def set_boxes(self, Box):
+        for i in range(len(self.procs)):
+            self.procs[i].set_box(Box)

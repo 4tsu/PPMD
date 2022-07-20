@@ -10,8 +10,11 @@ import random
 random.seed(1)
 
 # ---------------------------------------------------
-
-def make_conf(N, Box):
+## 初期配置を生成する
+### 一様分布なので、最初から空間分割して配置したい
+def make_conf(Machine):
+    Box = Machine.procs[0].Box
+    N = Box.N
     xl = Box.xl
     yl = Box.yl
     x_min = Box.x_min
@@ -19,35 +22,41 @@ def make_conf(N, Box):
     xppl = ceil(N/yl)
     yppl = ceil(N/xl)
     pitch = xl/xppl
-    for i in range(N):
-        iy = i//xppl
-        ix = i%xppl
-        x = ix*pitch
-        y = iy*pitch
-        Particle = particle.Particle(i,x,y)
-        Box.particles.append(Particle)
-    return Box
+
+    for i,p in enumerate(Machine.procs):
+        for j in range(N):
+            jy = j//xppl
+            jx = j%xppl
+            x = jx*pitch
+            y = jy*pitch
+            Particle = particle.Particle(j,x,y)
+            Machine.procs[i].particles.append(Particle)
+        
+    return Machine
 
 
 ## 初速の大きさだけ受け取って、ランダムな方向に向ける
-def set_initial_velocity(v0, Box):
+def set_initial_velocity(v0, Machine):
     avx = 0.0
     avy = 0.0
-    for i, p in enumerate(Box.particles):
-        theta = random.random() * 2.0 * pi
-        vx = v0 * cos(theta)
-        vy = v0 * sin(theta)
-        p.vx = vx
-        p.vy = vy
-        Box.particles[i] = p
-        avx += vx
-        avy += vy
-    avx /= len(Box.particles)
-    avy /= len(Box.particles)
-    for i in range(len(Box.particles)):
-        Box.particles[i].vx -= avx
-        Box.particles[i].vy -= avy
-    return Box
+    for i, proc in enumerate(Machine.procs):
+        for j, p in enumerate(proc.particles):
+            theta = random.random() * 2.0 * pi
+            vx = v0 * cos(theta)
+            vy = v0 * sin(theta)
+            p.vx = vx
+            p.vy = vy
+            proc.particles[j] = p
+            avx += vx
+            avy += vy
+        Machine.procs[i] = proc
+    avx /= Machine.procs[0].Box.N
+    avy /= Machine.procs[0].Box.N
+    for i, proc in enumerate(Machine.procs):
+        for j in range(len(proc.particles)):
+            proc.particles[j].vx -= avx
+            proc.particles[j].vy -= avy
+    return Machine
 
 
 
