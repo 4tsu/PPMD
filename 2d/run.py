@@ -32,17 +32,25 @@ Machine.set_boxes(Box)   ### シミュレーションボックスのグローバ
 Machine = sim.make_conf(Machine)   ### 初期配置
 Machine = sim.set_initial_velocity(1.0, Machine)   ### 初速
 
-## 粒子の軌跡出力準備
+## 粒子の軌跡とエネルギー出力準備
 ### export_cdviewが上書き方式なので、.cdvファイルを事前にクリアしておく
 for filename in os.listdir("."):
     if '.cdv' in filename:
         os.remove(filename)
+### step 0 情報
+t = 0
+k = 0
+v = 0
 for proc in Machine.procs:
     sim.export_cdview(proc, 0)
+    k += box.kinetic_energy(proc)
+    v += box.potential_energy(proc)
+print('{:10.5f} {} {} {}'.format(t, k, v, k+v))
+
 
 ## ループ
-t = 0
 for step in range(STEPS):
+    t += dt
     k = 0
     v = 0
     for i,proc in enumerate(Machine.procs):
@@ -57,6 +65,5 @@ for step in range(STEPS):
         k += box.kinetic_energy(proc)
         v += box.potential_energy(proc)
     print('{:10.5f} {} {} {}'.format(t, k, v, k+v))
-    t += dt
     # Machine.communicate()   ### 1stepの計算が全て終わったら、同期通信をする
 print('*** Simulation Ended! ***', file=sys.stderr)
