@@ -96,10 +96,9 @@ def calculate_force(proc, dt):
 
 
 def update_position(proc, dt):
-    dt_half = dt * 0.5
     for i,p in enumerate(proc.particles):
-        p.x += p.vx * dt_half
-        p.y += p.vy * dt_half
+        p.x += p.vx * dt
+        p.y += p.vy * dt
         proc.particles[i] = p
     return proc
 
