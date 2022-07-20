@@ -60,8 +60,8 @@ for step in range(STEPS):
         proc = sim.update_position(proc, dt)
         proc = box.periodic(proc)
         Machine.procs[i] = proc
-        if step+1 % OB_INTERVAL == 0:
-            sim.export_cdview(proc, step)   ### 情報の出力
+        if (step+1) % OB_INTERVAL == 0:
+            sim.export_cdview(proc, step+1)   ### 情報の出力
         k += box.kinetic_energy(proc)
         v += box.potential_energy(proc)
     print('{:10.5f} {} {} {}'.format(t, k, v, k+v))
