@@ -22,20 +22,19 @@ OB_INTERVAL = 50
 dt = 0.0010
 N = 100
 
-## シミュレーション環境の準備
+## シミュレーション実行環境の準備
 Machine = envs.Machine(1)   ### 並列プロセス数
 
 ## シミュレーションする系の準備
 Box = box.SimulationBox([10, 10], 2.0, N)
-Machine.set_boxes(Box)
-Machine = sim.make_conf(Machine)
-Machine = sim.set_initial_velocity(1.0, Machine)
-print(len(Machine.procs[0].particles))
-"""
+Machine.set_boxes(Box)   ### シミュレーションボックスのグローバルな設定はグローバルに共有
+Machine = sim.make_conf(Machine)   ### 初期配置
+Machine = sim.set_initial_velocity(1.0, Machine)   ### 初速
+
 ## ループ
 t = 0
 for step in range(STEPS):
-    for proc in Computer.procs:
+    for proc in Machine.procs:
         ### 計算本体(シンプレクティック積分)
         Box = sim.update_position(Box, dt)
         Box = sim.calculate_force(Box, dt)
@@ -47,6 +46,5 @@ for step in range(STEPS):
     v = Box.potential_energy()
     print('{:10.5f} {} {} {}'.format(t, k, v, k+v))
     t += dt
-    # Computer.communicate()   ### 1stepの計算が全て終わったら、同期通信をする
+    # Machine.communicate()   ### 1stepの計算が全て終わったら、同期通信をする
 print('*** Simulation Ended! ***', file=sys.stderr)
-"""
