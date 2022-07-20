@@ -57,13 +57,15 @@ class Potential:
         v = self.epsilon * (self.rho/r**12 - self.rho/r**6)
         return v
 
-# ----------------------------------------------------
+# -----------------------------------------------------------------------
 def periodic(proc):
     for i in range(len(proc.particles)):
         x, y = proc.Box.periodic_coordinate(proc.particles[i].x, proc.particles[i].y)
         proc.particles[i].x = x
         proc.particles[i].y = y
     return proc
+
+
 
 def kinetic_energy(proc):
     k = 0
@@ -73,6 +75,8 @@ def kinetic_energy(proc):
     k /= len(proc.particles)
     k /= 2
     return k
+
+
 
 def potential_energy(proc):
     v = 0

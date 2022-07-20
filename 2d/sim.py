@@ -35,6 +35,7 @@ def make_conf(Machine):
     return Machine
 
 
+
 ## 初速の大きさだけ受け取って、ランダムな方向に向ける
 def set_initial_velocity(v0, Machine):
     avx = 0.0
@@ -101,6 +102,8 @@ def update_position(proc, dt):
         p.y += p.vy * dt
         proc.particles[i] = p
     return proc
+
+
 
 ## 可視化ソフトcdview用のダンプ出力
 ### 並列化のため上書き形式
