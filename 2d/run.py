@@ -56,6 +56,7 @@ for step in range(STEPS):
     for i,proc in enumerate(Machine.procs):
         ### 計算本体(シンプレクティック積分)
         proc = sim.update_position(proc, dt/2)
+        proc = sim.make_pair(proc)
         proc = sim.calculate_force(proc, dt)
         proc = sim.update_position(proc, dt/2)
         proc = box.periodic(proc)

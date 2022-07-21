@@ -10,6 +10,15 @@ import random
 random.seed(1)
 
 # ---------------------------------------------------
+
+class Pair:
+    def __init__(self, i, j, idi, idj):
+        self.i = i
+        self.j = j
+        self.idi = idi
+        self.idj = idj
+
+# ---------------------------------------------------
 ## 初期配置を生成する
 ### 一様分布なので、最初から空間分割して配置したい
 def make_conf(Machine):
@@ -79,23 +88,25 @@ def periodic_od(L,dx):
 ## 力の計算
 def calculate_force(proc, dt):
     Box = proc.Box
-    for i in range(len(proc.particles)-1):
-        for j in range(i+1, len(proc.particles)):
-            ip = proc.particles[i]
-            jp = proc.particles[j]
-            r = Box.periodic_distance(ip.x, ip.y, jp.x, jp.y)
-            if r > Box.cutoff:
-                continue
-            df = (24.0 * r**6 - 48.0) / r**14 * dt
+    pl = proc.pairlist
+    for k in range(len(pl)):
+        ip = proc.particles[pl[k].i]
+        jp = proc.particles[pl[k].j]
+        assert ip.id == pl[k].idi, 'ペアリストIDと選択された粒子IDが一致しません'
+        assert jp.id == pl[k].idj, 'ペアリストIDと選択された粒子IDが一致しません'
+        r = Box.periodic_distance(ip.x, ip.y, jp.x, jp.y)
+        if r > Box.cutoff:
+            continue
+        df = (24.0 * r**6 - 48.0) / r**14 * dt
 
-            dx = periodic_od(Box.xl,jp.x-ip.x)
-            dy = periodic_od(Box.yl,jp.y-ip.y)
-            ip.vx += df * dx
-            ip.vy += df * dy
-            jp.vx -= df * dx
-            jp.vy -= df * dy
-            proc.particles[i] = ip
-            proc.particles[j] = jp
+        dx = periodic_od(Box.xl,jp.x-ip.x)
+        dy = periodic_od(Box.yl,jp.y-ip.y)
+        ip.vx += df * dx
+        ip.vy += df * dy
+        jp.vx -= df * dx
+        jp.vy -= df * dy
+        proc.particles[pl[k].i] = ip
+        proc.particles[pl[k].j] = jp
     return proc
 
 
@@ -117,4 +128,18 @@ def export_cdview(proc, step):
         for i,p in enumerate(proc.particles):
             f.write('{} 0 {} {} 0\n'.format(p.id, p.x, p.y))
 
+
+
+## ペアリスト作成
+def make_pair(proc):
+    particles = proc.particles
+    proc.pairlist.clear()
+    for i in range(0, len(particles)-1):
+        for j in range(i+1, len(particles)):
+            r = proc.Box.periodic_distance(particles[i].x, particles[i].y, particles[j].x, particles[j].y)
+            if r > proc.Box.cutoff:
+                continue
+            P = Pair(i, j, particles[i].id, particles[j].id)
+            proc.pairlist.append(P)
+    return proc
 # ---------------------------------------------------

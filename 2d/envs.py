@@ -16,6 +16,7 @@ class Processor:
         self.neighbors = []   ### シミュレーション上で隣接するプロセッサ
         self.packets = []   ### 通信時に送信する情報を詰めておく
         self.receivebox= []   ### 通信時に受信するポスト
+        self.pairlist = []   ### 粒子ペアリスト
         
         self.boundaries = []   ### 
         self.center = []
