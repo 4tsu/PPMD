@@ -2,6 +2,8 @@
 ## 対象とする系、シミュレーションボックスについてのコード
 ## 系のエネルギーなどの観測コード
 # ====================================================
+import sim
+
 import random
 
 random.seed(1)
@@ -52,7 +54,9 @@ class SimulationBox:
     
     def subtract_margin(self, arg):
         self.margin_life -= arg
-
+    
+    def set_mesh(self):
+        self.Meshlist = sim.Meshlist(self)
 
 
 ## ポテンシャル記述クラス
