@@ -44,6 +44,15 @@ class SimulationBox:
     def add_particle(self, particle):
         self.particles.append(particle)
 
+    ### bookkeeping法のマージン
+    def set_margin(self, margin):
+        self.margin = margin
+        self.co_p_margin = self.cutoff + self.margin   ### マージン＋カットオフ距離
+        self.margin_life = margin
+    
+    def subtract_margin(self, arg):
+        self.margin_life -= arg
+
 
 
 ## ポテンシャル記述クラス

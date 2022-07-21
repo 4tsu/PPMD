@@ -137,9 +137,24 @@ def make_pair(proc):
     for i in range(0, len(particles)-1):
         for j in range(i+1, len(particles)):
             r = proc.Box.periodic_distance(particles[i].x, particles[i].y, particles[j].x, particles[j].y)
-            if r > proc.Box.cutoff:
+            if r > proc.Box.co_p_margin:
                 continue
             P = Pair(i, j, particles[i].id, particles[j].id)
             proc.pairlist.append(P)
+    return proc
+
+
+
+def check_pairlist(proc, dt):
+    vmax2 = 0.0
+    for p in proc.particles:
+        v2 = p.vx**2 + p.vy**2
+        if v2 > vmax2:
+            vmax2 = v2
+    vmax = sqrt(vmax2)
+    proc.Box.subtract_margin(vmax*2.0*dt)
+    if proc.Box.margin_life < 0.0:
+        proc.Box.set_margin(proc.Box.margin)
+        proc = make_pair(proc)
     return proc
 # ---------------------------------------------------

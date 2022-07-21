@@ -28,9 +28,13 @@ Machine = envs.Machine(1)   ### 並列プロセス数
 
 ## シミュレーションする系の準備
 Box = box.SimulationBox([10, 10], 2.0, N)
+Box.set_margin(0.5)
 Machine.set_boxes(Box)   ### シミュレーションボックスのグローバルな設定はグローバルに共有
 Machine = sim.make_conf(Machine)   ### 初期配置
 Machine = sim.set_initial_velocity(1.0, Machine)   ### 初速
+### 最初のペアリスト作成
+for proc in Machine.procs:
+    proc = sim.make_pair(proc)
 
 ## 粒子の軌跡とエネルギー出力準備
 ### export_cdviewが上書き方式なので、.cdvファイルを事前にクリアしておく
@@ -56,7 +60,7 @@ for step in range(STEPS):
     for i,proc in enumerate(Machine.procs):
         ### 計算本体(シンプレクティック積分)
         proc = sim.update_position(proc, dt/2)
-        proc = sim.make_pair(proc)
+        proc = sim.check_pairlist(proc, dt)
         proc = sim.calculate_force(proc, dt)
         proc = sim.update_position(proc, dt/2)
         proc = box.periodic(proc)
@@ -66,5 +70,5 @@ for step in range(STEPS):
         k += box.kinetic_energy(proc)
         v += box.potential_energy(proc)
     print('{:10.5f} {} {} {}'.format(t, k, v, k+v))
-    # Machine.communicate()   ### 1stepの計算が全て終わったら、同期通信をする
+    # Machine.communicate()   ### 1stepの計算が全て終わったら、同期通信をする.Box情報の共有も含む
 print('*** Simulation Ended! ***', file=sys.stderr)
