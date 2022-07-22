@@ -9,7 +9,7 @@ import numpy as np
 
 # --------------------------------------------------------------------
 
-class Processor:
+class Process:
     def __init__(self, rank):
         self.rank = rank
         self.particles = []   ### 所属粒子
@@ -273,7 +273,7 @@ class Machine:
     def __init__(self, num_of_procs):
         self.procs = []
         for i in range(num_of_procs):
-            P = Processor(i)
+            P = Process(i)
             self.procs.append(P)
 
     ### すべてのプロセッサでシミュレーションボックスのグローバルな設定を共有する
