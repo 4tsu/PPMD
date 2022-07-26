@@ -22,9 +22,10 @@ STEPS = 1000
 OB_INTERVAL = 50
 dt = 0.0010
 N = 100
+np = 1
 
 ## シミュレーション実行環境の準備
-Machine = envs.Machine(1)   ### 並列プロセス数
+Machine = envs.Machine(np)   ### 並列プロセス数
 
 ## シミュレーションする系の準備
 Box = box.SimulationBox([10, 10], 2.0, N)
@@ -32,6 +33,7 @@ Box.set_margin(0.5)
 Machine.set_boxes(Box)   ### シミュレーションボックスのグローバルな設定はグローバルに共有
 Machine = sim.make_conf(Machine)   ### 初期配置
 Machine = sim.set_initial_velocity(1.0, Machine)   ### 初速
+"""
 ### 最初のペアリスト作成
 for proc in Machine.procs:
     proc = sim.make_pair(proc)
@@ -72,3 +74,4 @@ for step in range(STEPS):
     print('{:10.5f} {} {} {}'.format(t, k, v, k+v))
     # Machine.communicate()   ### 1stepの計算が全て終わったら、同期通信をする.Box情報の共有も含む
 print('*** Simulation Ended! ***', file=sys.stderr)
+"""

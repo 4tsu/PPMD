@@ -58,6 +58,13 @@ class SimulationBox:
     def set_mesh(self):
         self.Meshlist = sim.Meshlist(self)
 
+    ### 空間分割の仕方を保存
+    def set_subdomain(self, xn, yn, sd_xl, sd_yl):
+        self.xn = xn
+        self.yn = yn
+        self.sd_xl = sd_xl
+        self.sd_yl = sd_yl
+
 
 ## ポテンシャル記述クラス
 ### 将来的にはこれを継承したユーザー定義クラスの使用を想定

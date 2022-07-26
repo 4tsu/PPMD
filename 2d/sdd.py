@@ -33,30 +33,63 @@ def plot_fig(S, s, method_type_name):
     plt.savefig(fgnm)
     # plt.show()
     plt.close()
+
+
+
 def ideal(data, cell):
     N = cell[0]*cell[1]
     icount = len(data[0])/N
     return icount
 
-def simple(data, S):
-    cell = S.cell
-    dx = 1.0/cell[0]
-    dy = 1.0/cell[1]
-    for i in range(cell[1]):
-        bn = dy*(i+1)
-        bs = dy*i
-        for j in range(cell[0]):
-            be = dx*(j+1)
-            bw = dx*j
-            p = i*cell[0]+j
-            S.Processors[p].boundaries.append([0.0, 1.0, -1*bn])
-            S.Processors[p].boundaries.append([1.0, 0.0, -1*be])
-            S.Processors[p].boundaries.append([0.0, 1.0, -1*bs])
-            S.Processors[p].boundaries.append([1.0, 0.0, -1*bw])
-            S.Processors[p].center.append((bw+be)/2)
-            S.Processors[p].center.append((bn+bs)/2)
-    S.reallocate(data)
-    return S
+
+
+def get_simple_array(Box, np):
+    ## 空間分割の形状=領域の並び方を決める
+    xl = Box.xl
+    yl = Box.yl
+    ### 何x何の配列が良いか決める。領域は正方形に近い方が良い
+    xn_list = []
+    for xn in range(1, np+1):
+        if np%xn == 0:
+            xn_list.append(xn)
+    xy_diff = xl + yl
+    xn_best = 0
+    for xn in xn_list:
+        yn = np / xn
+        sd_xl = xl/xn
+        sd_yl = yl/yn
+        if abs(sd_xl-sd_yl) < xy_diff:
+            xy_diff = abs(sd_xl - sd_yl)
+            xn_best = xn
+    xn = xn_best
+    yn = int(np/xn)
+    Box.set_subdomain(xn, yn, xl/xn, yl/yn)
+    return Box
+
+
+
+def simple(Machine):
+    Machine = get_simple_array(Machine)
+
+    ## 求めた配列に合わせて分割
+    sd_xl = xl/xn
+    sd_yl = yl/yn
+    for iy in range(yn):
+        bt = sd_yl*(iy+1)
+        bb = sd_yl*iy
+        for jx in range(xn):
+            br = sd_xl*(jx+1)
+            bl = sd_xl*jx
+            p = iy*xn+jx
+            Machine.procs[p].SubDomain.boundaries.append([0.0, 1.0, -1*bn])
+            Machine.procs[p].SubDomain.boundaries.append([1.0, 0.0, -1*be])
+            Machine.procs[p].SubDomain.boundaries.append([0.0, 1.0, -1*bs])
+            Machine.procs[p].SubDomain.boundaries.append([1.0, 0.0, -1*bw])
+            Machine.procs[p].SubDomain.center.append((bw+be)/2)
+            Machine.procs[p].SubDomain.center.append((bn+bs)/2)
+    return Machine
+
+
 
 def xybin(data, S):
     cell = S.cell

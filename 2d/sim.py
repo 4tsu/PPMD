@@ -3,6 +3,7 @@
 # ===================================================
 import particle
 import box
+import sdd
 
 from math import pi, sin, cos, ceil, sqrt
 import random
@@ -143,17 +144,29 @@ def make_conf(Machine):
     yppl = ceil(N/xl)
     pitch = xl/xppl
 
-    for i,p in enumerate(Machine.procs):
-        for j in range(N):
-            jy = j//xppl
-            jx = j%xppl
-            x = jx*pitch + x_min
-            y = jy*pitch + y_min
-            Particle = particle.Particle(j,x,y)
-            Machine.procs[i].particles.append(Particle)
-            assert x_min <= x < x_max, '初期配置が適切ではありません'
-            assert y_min <= y < y_max, '初期配置が適切ではありません'
-        
+    ### 等間隔分割の仕方を取得
+    Box = sdd.get_simple_array(Box, len(Machine.procs))
+    xn = Box.xn
+    yn = Box.yn
+    sd_xl = Box.sd_xl
+    sd_yl = Box.sd_yl
+    Machine.set_boxes(Box)
+
+    for j in range(N):
+        ### 粒子位置決める
+        jy = j//xppl
+        jx = j%xppl
+        x = jx*pitch
+        y = jy*pitch
+        ### 粒子をどの領域=プロセスに分配する
+        ip = int((y//sd_yl)*xn + x//sd_xl)
+        ### 原点を中心にした座標系
+        x += x_min
+        y += y_min
+        Particle = particle.Particle(j,x,y)
+        Machine.procs[ip].subdomain.particles.append(Particle)
+        assert x_min <= x < x_max, '初期配置が適切ではありません'
+        assert y_min <= y < y_max, '初期配置が適切ではありません'
     return Machine
 
 
@@ -163,22 +176,22 @@ def set_initial_velocity(v0, Machine):
     avx = 0.0
     avy = 0.0
     for i, proc in enumerate(Machine.procs):
-        for j, p in enumerate(proc.particles):
+        for j, p in enumerate(proc.subdomain.particles):
             theta = random.random() * 2.0 * pi
             vx = v0 * cos(theta)
             vy = v0 * sin(theta)
             p.vx = vx
             p.vy = vy
-            proc.particles[j] = p
+            proc.subdomain.particles[j] = p
             avx += vx
             avy += vy
         Machine.procs[i] = proc
     avx /= Machine.procs[0].Box.N
     avy /= Machine.procs[0].Box.N
     for i, proc in enumerate(Machine.procs):
-        for j in range(len(proc.particles)):
-            proc.particles[j].vx -= avx
-            proc.particles[j].vy -= avy
+        for j in range(len(proc.subdomain.particles)):
+            proc.subdomain.particles[j].vx -= avx
+            proc.subdomain.particles[j].vy -= avy
     return Machine
 
 
