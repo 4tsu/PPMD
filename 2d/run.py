@@ -33,11 +33,11 @@ Box.set_margin(0.5)
 Machine.set_boxes(Box)   ### シミュレーションボックスのグローバルな設定はグローバルに共有
 Machine = sim.make_conf(Machine)   ### 初期配置
 Machine = sim.set_initial_velocity(1.0, Machine)   ### 初速
-"""
+
 ### 最初のペアリスト作成
 for proc in Machine.procs:
     proc = sim.make_pair(proc)
-
+"""
 ## 粒子の軌跡とエネルギー出力準備
 ### export_cdviewが上書き方式なので、.cdvファイルを事前にクリアしておく
 for filename in os.listdir("."):

@@ -63,7 +63,7 @@ def get_simple_array(Box, np):
             xn_best = xn
     xn = xn_best
     yn = int(np/xn)
-    Box.set_subdomain(xn, yn, xl/xn, yl/yn)
+    Box.set_subregion(xn, yn, xl/xn, yl/yn)
     return Box
 
 
@@ -81,12 +81,12 @@ def simple(Machine):
             br = sd_xl*(jx+1)
             bl = sd_xl*jx
             p = iy*xn+jx
-            Machine.procs[p].SubDomain.boundaries.append([0.0, 1.0, -1*bn])
-            Machine.procs[p].SubDomain.boundaries.append([1.0, 0.0, -1*be])
-            Machine.procs[p].SubDomain.boundaries.append([0.0, 1.0, -1*bs])
-            Machine.procs[p].SubDomain.boundaries.append([1.0, 0.0, -1*bw])
-            Machine.procs[p].SubDomain.center.append((bw+be)/2)
-            Machine.procs[p].SubDomain.center.append((bn+bs)/2)
+            Machine.procs[p].subregion.boundaries.append([0.0, 1.0, -1*bn])
+            Machine.procs[p].subregion.boundaries.append([1.0, 0.0, -1*be])
+            Machine.procs[p].subregion.boundaries.append([0.0, 1.0, -1*bs])
+            Machine.procs[p].subregion.boundaries.append([1.0, 0.0, -1*bw])
+            Machine.procs[p].subregion.center.append((bw+be)/2)
+            Machine.procs[p].subregion.center.append((bn+bs)/2)
     return Machine
 
 

@@ -15,7 +15,7 @@ class Process:
         self.packets = []   ### 通信時に送信する情報を詰めておく
         self.receivebox = []   ### 通信時に受信するポスト
         self.communicatable = []   ### ハードウェア上で隣接するコア
-        self.subdomain = SubDomain()
+        self.subregion = subregion()
 
     def set_box(self, Box):
         self.Box = Box
@@ -31,7 +31,7 @@ class Process:
 
 
 
-class SubDomain:
+class subregion:
     def __init__(self):
         self.particles = []   ### 所属粒子
         self.pairlist = []   ### 粒子ペアリスト
@@ -134,7 +134,7 @@ class Machine:
     ## 周期境界を考えた隣接セル検出
     def detect_neighbors(self, cutoff):
         for i,p in enumerate(self.procs):
-            self.procs[i].SubDomain.neighbors.clear()
+            self.procs[i].subregion.neighbors.clear()
             pr = random.sample(p.particles, len(p.particles))
             for j,q in enumerate(self.procs):
                 if i == j:
@@ -145,7 +145,7 @@ class Machine:
                     for n in qr:
                         r = periodic_distance(m[0], m[1], n[0], n[1])
                         if r < cutoff:
-                            self.procs[i].SubDomain.neighbors.append(j)
+                            self.procs[i].subregion.neighbors.append(j)
                             flag = True
                             break
                     if flag == True:
@@ -154,7 +154,7 @@ class Machine:
     ## 周期境界を考えない隣接セル検出
     def detect_adjacent(self, cutoff):
         for i,p in enumerate(self.procs):
-            self.procs[i].SubDomain.neighbors.clear()
+            self.procs[i].subregion.neighbors.clear()
             pr = random.sample(p.particles, len(p.particles))
             for j,q in enumerate(self.procs):
                 if i == j:
@@ -165,7 +165,7 @@ class Machine:
                     for n in qr:
                         r = ((m[0]-n[0])**2 + (m[1]-n[1])**2)**0.5
                         if r < cutoff:
-                            self.procs[i].SubDomain.neighbors.append(j)
+                            self.procs[i].subregion.neighbors.append(j)
                             flag = True
                             break
                     if flag == True:
@@ -212,7 +212,7 @@ class Machine:
                 pckt.destination = j
                 pckt.current = i
                 pckt.direction = self.calc_direction(i,j)
-                self.procs[i].SubDomain.packets.append(pckt)
+                self.procs[i].subregion.packets.append(pckt)
 
     def calc_all_center(self, across_border=False):
         if across_border:
@@ -228,7 +228,7 @@ class Machine:
     def reallocate(self):
         D = data
         for i,p in enumerate(self.procs):
-            self.procs[i].SubDomain.particles.clear()
+            self.procs[i].subregion.particles.clear()
             B = p.boundaries
             M = []
             ctr = p.center
@@ -242,7 +242,7 @@ class Machine:
                         break
                 if flag == True:
                     M.append(j)
-                    self.procs[i].SubDomain.particles.append([x, y, D[2][j]])
+                    self.procs[i].subregion.particles.append([x, y, D[2][j]])
             D = np.delete(D, M, 1)
             
     def count(self):
@@ -265,12 +265,12 @@ class Machine:
                 self.procs[pckt.current].receivebox.append(pckt)
                 print('processor #', i, '-> #', pckt.current, 'with', pckt.get_num_passengers(), 'particles')
                 self.commtable[i,pckt.current] += pckt.get_num_passengers()
-            self.procs[i].SubDomain.packets.clear()
+            self.procs[i].subregion.packets.clear()
         comm_flag = False
         for i in range(len(self.procs)):
             # print('processor # ', i, "'s receiving")
-            self.procs[i].SubDomain.receive()
-            if self.procs[i].SubDomain.packets:
+            self.procs[i].subregion.receive()
+            if self.procs[i].subregion.packets:
                 comm_flag = True
         return comm_flag
 

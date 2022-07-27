@@ -59,7 +59,7 @@ class SimulationBox:
         self.Meshlist = sim.Meshlist(self)
 
     ### 空間分割の仕方を保存
-    def set_subdomain(self, xn, yn, sd_xl, sd_yl):
+    def set_subregion(self, xn, yn, sd_xl, sd_yl):
         self.xn = xn
         self.yn = yn
         self.sd_xl = sd_xl

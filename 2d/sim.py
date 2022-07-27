@@ -164,7 +164,7 @@ def make_conf(Machine):
         x += x_min
         y += y_min
         Particle = particle.Particle(j,x,y)
-        Machine.procs[ip].subdomain.particles.append(Particle)
+        Machine.procs[ip].subregion.particles.append(Particle)
         assert x_min <= x < x_max, '初期配置が適切ではありません'
         assert y_min <= y < y_max, '初期配置が適切ではありません'
     return Machine
@@ -176,22 +176,22 @@ def set_initial_velocity(v0, Machine):
     avx = 0.0
     avy = 0.0
     for i, proc in enumerate(Machine.procs):
-        for j, p in enumerate(proc.subdomain.particles):
+        for j, p in enumerate(proc.subregion.particles):
             theta = random.random() * 2.0 * pi
             vx = v0 * cos(theta)
             vy = v0 * sin(theta)
             p.vx = vx
             p.vy = vy
-            proc.subdomain.particles[j] = p
+            proc.subregion.particles[j] = p
             avx += vx
             avy += vy
         Machine.procs[i] = proc
     avx /= Machine.procs[0].Box.N
     avy /= Machine.procs[0].Box.N
     for i, proc in enumerate(Machine.procs):
-        for j in range(len(proc.subdomain.particles)):
-            proc.subdomain.particles[j].vx -= avx
-            proc.subdomain.particles[j].vy -= avy
+        for j in range(len(proc.subregion.particles)):
+            proc.subregion.particles[j].vx -= avx
+            proc.subregion.particles[j].vy -= avy
     return Machine
 
 
