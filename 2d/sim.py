@@ -22,108 +22,120 @@ class Pair:
 
 
 ## ペアリストのメッシュ探索
-class Meshlist:
-    def __init__(self, Box):
+### プロセス並列化しているので、空間分割領域を利用した探索
+### プロセス数npに関してだけO(np^2)
+### 各SubRegionのcenterとraiusが必要
+class DomainPairList:
+    def __init__(self, Machine):
+        Box = Machine.procs[0].Box
+        np = Machine.np
         self.search_length = Box.cutoff + Box.margin
-        self.num_mesh_x = Box.xl//self.search_length - 1
-        self.mesh_size_x = Box.xl / self.num_mesh_x
-        self.num_mesh_y = Box.yl//self.search_length - 1
-        self.mesh_size_y = Box.yl / self.num_mesh_y
-        assert self.num_mesh_x > 2, 'ペアリスト探索メッシュの数が適切ではありません'
-        assert self.mesh_size_x > self.search_length, 'ペアリスト探索メッシュの大きさが適切ではありません'
-        assert self.num_mesh_y > 2, 'ペアリスト探索メッシュの数が適切ではありません'
-        assert self.mesh_size_y > self.search_length, 'ペアリスト探索メッシュの大きさが適切ではありません'
-        self.num_mesh_total = int(self.num_mesh_x * self.num_mesh_y)
+        self.num_mesh_total = int(np)
         self.counts = [0 for _ in range(self.num_mesh_total)]
         self.head_i = [0 for _ in range(self.num_mesh_total)]
+        self.radii = []
+        self.centers = []
+        self.ranks = []
+        for i, proc in enumerate(Machine.procs):
+            self.radii.append(proc.subregion.radius)
+            self.centers.append(proc.subregion.center)
+            self.ranks.append(proc.rank)
+            assert i == proc.rank, "プロセスのインデックスとrankが一致しません"
+        self.make_domian_pair_list(Box)
 
-    ### メッシュの周期境界補正
-    def periodic_mesh(self, ix, iy):
-        if ix < 0:
-            ix += self.num_mesh_x
-        if ix >= self.num_mesh_x:
-            ix -= self.num_mesh_x
-        if iy < 0:
-            iy += self.num_mesh_y
-        if iy >= self.num_mesh_y:
-            iy -= self.num_mesh_y
-        return ix, iy
+    ### 一個下の関数用
+    def judge(self, i, j, box):
+        if i == j:
+            return True
+        diff = box.periodic_distance(self.centers[i][0], self.centers[i][1], self.centers[j][0], self.centers[j][1])
+        if (diff - self.radii[i] - self.radii[j]) > box.co_p_margin:
+            return True
 
-    ### メッシュリストを使った粒子の住所録を作成
-    def make_mesh(self, particles):
-        particle_position = [0 for _ in range(len(particles))]
-        for i,p in enumerate(particles):
-            ix = p.x // self.mesh_size_x
-            iy = p.y // self.mesh_size_y
-            ix, iy = self.periodic_mesh(ix, iy)
-            i_mesh = int(ix + iy * self.num_mesh_x)
-            assert i_mesh >= 0, '割り当てられたメッシュ領域が不正です'
-            assert i_mesh < self.num_mesh_total, '割り当てられたメッシュ領域が不正です'
-            self.counts[i_mesh] += 1
-            particle_position[i] = i_mesh
+    ## 相互作用する可能性のある領域ペア検出
+    def make_domian_pair_list(self, box):
+        ### O(np^2)で全探索
+        ### 作用反作用を考慮して半分に落とすのを、計算が効率よくなるようにやる
+        ### なるべくすべての領域で同じくらいの長さの領域ペアリストを持ちたい
+        dpl = []
 
-        ### 各メッシュ領域の先頭粒子インデックスの登録
-        s = 0
-        for i in range(self.num_mesh_total-1):
-            s += self.counts[i]
-            self.head_i[i+1] = s
-            
-        ### メッシュ順の粒子インデックスの作成
-        self.sorted_particle_i = [0 for _ in range(len(particles))]
-        pointer = [0 for _ in range(self.num_mesh_total)]
-        for i in range(len(particles)):
-            i_mesh = particle_position[i]
-            j = self.head_i[i_mesh] + pointer[i_mesh]
-            self.sorted_particle_i[j] = i
-            pointer[i_mesh] += 1
+        for i in range(int(len(self.ranks)/2)):
+            i_dpl = []
+            for j in range(i+1, int(len(self.ranks)/2)+i+1):
+                if self.judge(i,j,box):
+                    continue
+                i_dpl.append([i,j])
+            dpl.append(i_dpl)
 
-    ### メッシュリストを使用したペア探索
-    def search_pair(self, i_mesh, proc):
-        ix = i_mesh%self.num_mesh_x
-        iy = i_mesh//self.num_mesh_x
+        for i in range(int(len(self.ranks)/2), len(self.ranks)-1):
+            i_dpl = []
+            for j in range(0, i-int(len(self.ranks)/2)):
+                if self.judge(i,j,box):
+                    continue
+                i_dpl.append([i,j])
+            for j in range(i+1, len(self.ranks)):
+                if self.judge(i,j,box):
+                    continue
+                i_dpl.append([i,j])
+            dpl.append(i_dpl)
 
-        ### 隣接するメッシュ領域との間で粒子ペア探索
-        ### 作用反作用を考えて半分
-        proc = self.search_other_region(i_mesh, ix+1, iy-1, proc)
-        proc = self.search_other_region(i_mesh, ix+1, iy,   proc)
-        proc = self.search_other_region(i_mesh, ix+1, iy+1, proc)
-        proc = self.search_other_region(i_mesh, ix,   iy+1, proc)
+        for i in range(len(self.ranks)-1, len(self.ranks)):
+            i_dpl = []
+            for j in range(0, i-int(len(self.ranks)/2)):
+                if self.judge(i,j,box):
+                    continue
+                i_dpl.append([i,j])
+            dpl.append(i_dpl)
+
+        self.list = dpl
+
+        print('Domain Pair List', self.list)
+
+
+
+    ### リストを使用したペア探索
+    ### 実行前にdomain_pair_listに基づいた通信をし、自プロセスに周辺粒子の情報を持ってくること。
+    def search_pair(self, proc):
+        rank = proc.rank
+
+        ### 他の領域と相互作用する可能性があるようだったら…
+        if len(self.list[rank]) != 0:
+            ### 隣接する領域との間で粒子ペア探索
+            assert len(proc.particles_in_neighbor) != 0, "周辺粒子情報がプロセスに登録されていません"
+            proc = self.search_other_region(proc)
         
         ### 自分の領域内の粒子ペアリスト作成
-        for k in range(self.head_i[i_mesh], self.head_i[i_mesh]+self.counts[i_mesh]-1):
-            for l in range(k+1, self.head_i[i_mesh]+self.counts[i_mesh]):
-                i = self.sorted_particle_i[k]
-                j = self.sorted_particle_i[l]
-                ip = proc.particles[i]
-                jp = proc.particles[j]
-                r = proc.Box.periodic_distance(ip.x, ip.y, jp.x, jp.y)
-                if r > proc.Box.co_p_margin:
+        pairlist = []
+        box = proc.Box
+        particles = proc.subregion.particles
+        for i in range(len(particles)-1):
+            for j in range(i, len(particles)):
+                ip = particles[i]
+                jp = particles[j]
+                r = box.periodic_distance(ip.x, ip.y, jp.x, jp.y)
+                if r > box.co_p_margin:
                     continue
                 P = Pair(i, j, ip.id, jp.id)
-                proc.pairlist.append(P)
+                pairlist.append(P)
         ### ペアリストを追加して返す
+        proc.subregion.pairlist.clear()
+        proc.subregion.pairlist = pairlist
         return proc
 
-    def search_other_region(self, i_mesh, ix, iy, proc):
-        ix, iy = self.periodic_mesh(ix, iy)
-        j_mesh = int(ix + iy * self.num_mesh_x)
-        for k in range(self.head_i[i_mesh], self.head_i[i_mesh]+self.counts[i_mesh]):
-            for l in range(self.head_i[j_mesh], self.head_i[j_mesh]+self.counts[j_mesh]):
-                i = self.sorted_particle_i[k]
-                j = self.sorted_particle_i[l]
-                ip = proc.particles[i]
-                jp = proc.particles[j]
-                r = proc.Box.periodic_distance(ip.x, ip.y, jp.x, jp.y)
-                if r > proc.Box.co_p_margin:
+    def search_other_region(self, proc):
+        pairlist = []
+        box = proc.Box
+        particles = proc.particles_in_neighbor
+        for i in range(len(particles)-1):
+            for j in range(i, len(particles)):
+                ip = particles[i]
+                jp = particles[j]
+                r = box.periodic_distance(ip.x, ip.y, jp.x, jp.y)
+                if r > box.co_p_margin:
                     continue
                 P = Pair(i, j, ip.id, jp.id)
-                proc.pairlist.append(P)
-        return proc
-
-    def make_pair(self, proc):
-        self.make_mesh(proc.particles)
-        for i in range(self.num_mesh_total):
-            proc = self.search_pair(i, proc)
+                pairlist.append(P)
+        proc.subregion.pairlist.clear()
+        proc.subregion.pairlist = pairlist
         return proc
 
 
@@ -253,11 +265,15 @@ def export_cdview(proc, step):
 
 
 ## ペアリスト作成
-def make_pair(proc):
-    proc.pairlist.clear()
-    proc.Box.set_mesh()
-    proc = proc.Box.Meshlist.make_pair(proc)
-    return proc
+def make_pair(Machine):
+    np = Machine.np
+    dpl = DomainPairList(Machine)
+    for i,proc in enumerate(Machine.procs):
+        proc.set_domain_pair_list(dpl)
+    Machine.communicate_particles()
+    for i,proc in enumerate(Machine.procs):
+        Machine.procs[i] = proc.domain_pair_list.search_pair(proc)
+    return Machine
 
 
 

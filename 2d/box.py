@@ -54,11 +54,9 @@ class SimulationBox:
     
     def subtract_margin(self, arg):
         self.margin_life -= arg
-    
-    def set_mesh(self):
-        self.Meshlist = sim.Meshlist(self)
 
     ### 空間分割の仕方を保存
+    ### この関数ここにいるべきなのか、要検討
     def set_subregion(self, xn, yn, sd_xl, sd_yl):
         self.xn = xn
         self.yn = yn

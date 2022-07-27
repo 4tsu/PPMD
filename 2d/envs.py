@@ -1,6 +1,9 @@
 # =================================================
 ## シミュレーション実行環境のシミュレート用コード
 # =================================================
+import sdd
+import sim
+
 from os import stat_result
 import random
 from re import X
@@ -12,13 +15,18 @@ import numpy as np
 class Process:
     def __init__(self, rank):
         self.rank = rank
+        self.particles_in_neighbor = []   ### 相互作用する可能性のある周辺領域の粒子
+        self.pairlist_between_neighbor = []   ### 領域をまたいだペアリスト
         self.packets = []   ### 通信時に送信する情報を詰めておく
         self.receivebox = []   ### 通信時に受信するポスト
         self.communicatable = []   ### ハードウェア上で隣接するコア
-        self.subregion = subregion()
+        self.subregion = sdd.subregion()
 
     def set_box(self, Box):
         self.Box = Box
+    
+    def set_domain_pair_list(self, dpl):
+        self.domain_pair_list = dpl
 
     def receive(self):
         received_list = []
@@ -28,50 +36,6 @@ class Process:
                 received_list.append(i)
         self.packets = [self.receivebox[i] for i in range(len(self.receivebox)) if i not in received_list]
         self.receivebox.clear()
-
-
-
-class subregion:
-    def __init__(self):
-        self.particles = []   ### 所属粒子
-        self.pairlist = []   ### 粒子ペアリスト
-        self.neighbors = []   ### シミュレーション上で隣接するプロセッサ
-        self.center = []   ### 領域中心
-        self.boundaries = []   ### 領域境界
-
-    def calc_center(self, xi, yi):
-        Q = self.particles
-        if not len(Q) == 0:
-            sx = 0
-            sy = 0
-            for j in range(len(Q)):
-                sx += Q[j][xi]
-                sy += Q[j][yi]
-            sx /= len(Q)
-            sy /= len(Q)
-            sx, sy = periodic_coordinate(sx, sy)
-            assert 1>sx>0 and 1>sy>0, 'center value is out of range!'
-            self.center.clear()
-            self.center.append(sx)
-            self.center.append(sy)
-
-    def calc_perimeter(self):
-        prmtr = 0
-        C = []
-        B = self.boundaries
-        for j in range(len(B)):
-            a1 = B[j-1][0]
-            b1 = B[j-1][1]
-            c1 = B[j-1][2]
-            a2 = B[j][0]
-            b2 = B[j][1]
-            c2 = B[j][2]
-            x = (b1*c2 - b2*c1) / (a1*b2 - a2*b1)
-            y = (c1*a2 - c2*a1) / (a1*b2 - a2*b1)
-            C.append([x, y])
-        for j in range(len(C)):
-            prmtr += ((C[j][0]-C[j-1][0])**2 + (C[j][1]-C[j-1][1])**2)**0.5
-        self.perimeter = prmtr
 
 
 
@@ -119,6 +83,7 @@ class Packet:
 
 class Machine:
     def __init__(self, num_of_procs):
+        self.np = num_of_procs
         self.procs = []
         for i in range(num_of_procs):
             P = Process(i)
@@ -129,7 +94,17 @@ class Machine:
         for i in range(len(self.procs)):
             self.procs[i].set_box(Box)
     
+    def set_domain_pair_lists(self):
+        for i in range(len(self.procs)):
+            self.procs[i].set_domain_pair_list(self.proc[i].Box, self.np)
 
+    def communicate_particles(self):
+        for i,proc in enumerate(self.procs):
+            for j_pair in proc.domain_pair_list.list[i]:
+                print(j_pair)
+                for p in self.procs[j_pair[1]].subregion.particles:
+                    proc.particles_in_neighbor.append(p)
+            self.procs[i] = proc
 
     ## 周期境界を考えた隣接セル検出
     def detect_neighbors(self, cutoff):

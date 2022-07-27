@@ -14,6 +14,58 @@ from math import ceil
 
 # --------------------------------------------------------------------------------------------------------------------------------
 
+class subregion:
+    def __init__(self):
+        self.particles = []   ### 所属粒子
+        self.pairlist = []   ### 粒子ペアリスト
+        self.neighbors = []   ### シミュレーション上で隣接するプロセッサ
+        self.center = []   ### 領域中心
+        self.boundaries = []   ### 領域境界
+
+    def calc_center(self, box):
+        P = self.particles
+        if not len(P) == 0:
+            sx = 0
+            sy = 0
+            for i in range(len(P)):
+                sx += P[i].x
+                sy += P[i].y
+            sx /= len(P)
+            sy /= len(P)
+            sx, sy = box.periodic_coordinate(sx, sy)
+            assert box.x_max>sx>box.x_min and box.y_max>sy>box.y_min, 'center value is out of range!'
+            self.center.clear()
+            self.center.append(sx)
+            self.center.append(sy)
+
+    def calc_radius(self, box):
+        r_max = 0
+        for p in self.particles:
+            r = box.periodic_distance(p.x, p.y, self.center[0], self.center[1])
+            if r > r_max:
+                r_max = r
+        self.radius = r_max
+
+    def calc_perimeter(self):
+        prmtr = 0
+        C = []
+        B = self.boundaries
+        for j in range(len(B)):
+            a1 = B[j-1][0]
+            b1 = B[j-1][1]
+            c1 = B[j-1][2]
+            a2 = B[j][0]
+            b2 = B[j][1]
+            c2 = B[j][2]
+            x = (b1*c2 - b2*c1) / (a1*b2 - a2*b1)
+            y = (c1*a2 - c2*a1) / (a1*b2 - a2*b1)
+            C.append([x, y])
+        for j in range(len(C)):
+            prmtr += ((C[j][0]-C[j-1][0])**2 + (C[j][1]-C[j-1][1])**2)**0.5
+        self.perimeter = prmtr
+
+# ------------------------------------------------------------------------------------------
+
 def plot_fig(S, s, method_type_name):
     fig = plt.figure()
     ax = fig.add_subplot(111)

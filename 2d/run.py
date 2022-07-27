@@ -22,7 +22,7 @@ STEPS = 1000
 OB_INTERVAL = 50
 dt = 0.0010
 N = 100
-np = 1
+np = 4
 
 ## シミュレーション実行環境の準備
 Machine = envs.Machine(np)   ### 並列プロセス数
@@ -36,7 +36,12 @@ Machine = sim.set_initial_velocity(1.0, Machine)   ### 初速
 
 ### 最初のペアリスト作成
 for proc in Machine.procs:
-    proc = sim.make_pair(proc)
+    proc.subregion.calc_center(proc.Box)
+    proc.subregion.calc_radius(proc.Box)
+Machine = sim.make_pair(Machine)
+
+print(len(Machine.procs[0].subregion.pairlist))
+print(len(Machine.procs[0].pairlist_between_neighbor))
 """
 ## 粒子の軌跡とエネルギー出力準備
 ### export_cdviewが上書き方式なので、.cdvファイルを事前にクリアしておく
