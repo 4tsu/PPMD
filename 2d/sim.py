@@ -244,10 +244,10 @@ def calculate_force(proc, dt):
 
 
 def update_position(proc, dt):
-    for i,p in enumerate(proc.particles):
+    for i,p in enumerate(proc.subregion.particles):
         p.x += p.vx * dt
         p.y += p.vy * dt
-        proc.particles[i] = p
+        proc.subregion.particles[i] = p
     return proc
 
 

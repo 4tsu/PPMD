@@ -58,7 +58,6 @@ for proc in Machine.procs:
     k += box.kinetic_energy(proc)
     v += box.potential_energy(proc)
 print('{:10.5f} {} {} {}'.format(t, k, v, k+v))
-"""
 
 ## ループ
 for step in range(STEPS):
@@ -68,6 +67,7 @@ for step in range(STEPS):
     for i,proc in enumerate(Machine.procs):
         ### 計算本体(シンプレクティック積分)
         proc = sim.update_position(proc, dt/2)
+        """
         proc = sim.check_pairlist(proc, dt)
         proc = sim.calculate_force(proc, dt)
         proc = sim.update_position(proc, dt/2)
