@@ -87,26 +87,40 @@ def periodic(proc):
 
 def kinetic_energy(proc):
     k = 0
-    for p in proc.particles:
+    for p in proc.subregion.particles:
         k += p.vx ** 2
         k += p.vy ** 2
-    k /= len(proc.particles)
+    k /= len(proc.subregion.particles)
     k /= 2
     return k
 
 
 
+## ポテンシャルエネルギーの算出
+### ペアリストを使用するので、事前に要構築
 def potential_energy(proc):
     v = 0
-    for i in range(len(proc.particles)-1):
-        for j in range(i+1, len(proc.particles)):
-            ip = proc.particles[i]
-            jp = proc.particles[j]
-            r = proc.Box.periodic_distance(ip.x, ip.y, jp.x, jp.y)
-            if r > proc.Box.cutoff:
-                continue
-            v += proc.Box.Potential.potential(r) - 4.0*(1/proc.Box.cutoff**12 - 1/proc.Box.cutoff**6) 
-    v /= len(proc.particles)
+    ### 自領域内粒子間ポテンシャル
+    for pl in proc.subregion.pairlist:
+        ip = proc.subregion.particles[pl.i]
+        jp = proc.subregion.particles[pl.j]
+        assert ip.id==pl.idi and jp.id==pl.idj, '参照している粒子IDが一致しません'
+        assert ip.id != jp.id, '同一粒子ペアがリストに含まれています'
+        r = proc.Box.periodic_distance(ip.x, ip.y, jp.x, jp.y)
+        if r > proc.Box.cutoff:
+            continue
+        v += proc.Box.Potential.potential(r) - 4.0*(1/proc.Box.cutoff**12 - 1/proc.Box.cutoff**6) 
+    ### 領域をまたいだポテンシャル
+    for pl in proc.pairlist_between_neighbor:
+        ip = proc.subregion.particles[pl.i]
+        jp = proc.particles_in_neighbor[pl.j]
+        assert ip.id==pl.idi and jp.id==pl.idj, '粒子IDが一致しません'
+        assert ip.id != jp.id, '同一粒子ペアがリストに含まれています'
+        r = proc.Box.periodic_distance(ip.x, ip.y, jp.x, jp.y)
+        if r > proc.Box.cutoff:
+            continue
+        v += proc.Box.Potential.potential(r) - 4.0*(1/proc.Box.cutoff**12 - 1/proc.Box.cutoff**6) 
+    v /= len(proc.subregion.pairlist) + len(proc.pairlist_between_neighbor)
     return v
 
 # ==============================================================
