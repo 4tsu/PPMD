@@ -88,15 +88,12 @@ class DomainPairList:
 
         self.list = dpl
 
-        print('Domain Pair List', self.list)
-
 
 
     ### リストを使用したペア探索
     ### 実行前にdomain_pair_listに基づいた通信をし、自プロセスに周辺粒子の情報を持ってくること。
     def search_pair(self, proc):
         rank = proc.rank
-
         ### 他の領域と相互作用する可能性があるようだったら…
         if len(self.list[rank]) != 0:
             ### 隣接する領域との間で粒子ペア探索
@@ -124,18 +121,19 @@ class DomainPairList:
     def search_other_region(self, proc):
         pairlist = []
         box = proc.Box
-        particles = proc.particles_in_neighbor
-        for i in range(len(particles)-1):
-            for j in range(i, len(particles)):
-                ip = particles[i]
-                jp = particles[j]
+        my_particles = proc.subregion.particles
+        other_particles = proc.particles_in_neighbor
+        for i in range(len(my_particles)):
+            for j in range(len(other_particles)):
+                ip = my_particles[i]
+                jp = other_particles[j]
                 r = box.periodic_distance(ip.x, ip.y, jp.x, jp.y)
                 if r > box.co_p_margin:
                     continue
                 P = Pair(i, j, ip.id, jp.id)
                 pairlist.append(P)
-        proc.subregion.pairlist.clear()
-        proc.subregion.pairlist = pairlist
+        proc.pairlist_between_neighbor.clear()
+        proc.pairlist_between_neighbor = pairlist
         return proc
 
 
@@ -257,16 +255,16 @@ def update_position(proc, dt):
 ## 可視化ソフトcdview用のダンプ出力
 ### 並列化のため上書き形式
 def export_cdview(proc, step):
+    rank = proc.rank
     filename = 'conf{:0=4}.cdv'.format(step)
     with open(filename, 'a') as f:
-        for i,p in enumerate(proc.particles):
-            f.write('{} 0 {} {} 0\n'.format(p.id, p.x, p.y))
+        for i,p in enumerate(proc.subregion.particles):
+            f.write('{} {} {} {} 0\n'.format(p.id, rank, p.x, p.y))
 
 
 
 ## ペアリスト作成
 def make_pair(Machine):
-    np = Machine.np
     dpl = DomainPairList(Machine)
     for i,proc in enumerate(Machine.procs):
         proc.set_domain_pair_list(dpl)

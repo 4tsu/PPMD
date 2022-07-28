@@ -101,10 +101,9 @@ class Machine:
     def communicate_particles(self):
         for i,proc in enumerate(self.procs):
             for j_pair in proc.domain_pair_list.list[i]:
-                print(j_pair)
                 for p in self.procs[j_pair[1]].subregion.particles:
-                    proc.particles_in_neighbor.append(p)
-            self.procs[i] = proc
+                    assert proc.rank == i, 'ランクとプロセスリストのインデックスが一致しません'
+                    self.procs[i].particles_in_neighbor.append(p)
 
     ## 周期境界を考えた隣接セル検出
     def detect_neighbors(self, cutoff):
