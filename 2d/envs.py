@@ -100,10 +100,30 @@ class Machine:
 
     def communicate_particles(self):
         for i,proc in enumerate(self.procs):
+            self.procs[i].particles_in_neighbor.clear()
             for j_pair in proc.domain_pair_list.list[i]:
                 for p in self.procs[j_pair[1]].subregion.particles:
                     assert proc.rank == i, 'ランクとプロセスリストのインデックスが一致しません'
                     self.procs[i].particles_in_neighbor.append(p)
+    
+    def communicate_velocity(self):
+        for i, proci in enumerate(self.procs):
+            for j, pj in enumerate(proci.particles_in_neighbor):
+                for k, prock in enumerate(self.procs):
+                    flag = False
+                    if i==k:
+                        continue
+                    for l, pl in enumerate(prock.subdomain.particles):
+                        if pj.id != pl.id:
+                            continue
+                        pl.vx += pj.vx
+                        pl.vy += pj.vy
+                        prock.subdomain.particles[l] = pl
+                        flag = True
+                        break
+                    if flag:
+                        break
+
 
     ## 周期境界を考えた隣接セル検出
     def detect_neighbors(self, cutoff):

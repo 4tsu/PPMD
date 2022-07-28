@@ -64,15 +64,22 @@ for step in range(STEPS):
     t += dt
     k = 0
     v = 0
-    v_maxs = []
     ### 計算本体(シンプレクティック積分)
+    ### プロセスに関するループの頭が同期ポイント
+    v_maxs = []
     for i,proc in enumerate(Machine.procs):
-        proc = sim.update_position(proc, dt/2)
-        v_maxs.append(sim.check_vmax(proc))
-    Machine = sim.check_pairlist(Machine, max(v_maxs), dt)
-    for i,proc in enumerate(Machine.procs):   ### 同期通信
-        proc = sim.calculate_force(proc, dt)
-        proc = sim.update_position(proc, dt/2)
+        Machine.procs[i] = sim.update_position(proc, dt/2)
+
+    Machine.communicate_particles ### 位置が動いたので通信
+
+    for i,proc in enumerate(Machine.procs):
+        Machine.procs[i] = sim.calculate_force(proc, dt)
+
+    Machine.communicate_velocity ### 速度を更新したので通信
+    Machine.communicate_particles
+
+    for i,proc in enumerate(Machine.procs):
+        Machine.procs[i] = sim.update_position(proc, dt/2)
         """
         proc = box.periodic(proc)
         Machine.procs[i] = proc
@@ -80,7 +87,9 @@ for step in range(STEPS):
             sim.export_cdview(proc, step+1)   ### 情報の出力
         k += box.kinetic_energy(proc)
         v += box.potential_energy(proc)
+        v_maxs.append(sim.check_vmax(proc))
     print('{:10.5f} {} {} {}'.format(t, k, v, k+v))
+    Machine = sim.check_pairlist(Machine, max(v_maxs), dt)
     # Machine.communicate()   ### 1stepの計算が全て終わったら、同期通信をする.Box情報の共有も含む
 print('*** Simulation Ended! ***', file=sys.stderr)
 """

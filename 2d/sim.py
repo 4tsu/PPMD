@@ -220,12 +220,12 @@ def periodic_od(L,dx):
 ## 力の計算
 def calculate_force(proc, dt):
     Box = proc.Box
-    pl = proc.pairlist
-    for k in range(len(pl)):
-        ip = proc.particles[pl[k].i]
-        jp = proc.particles[pl[k].j]
-        assert ip.id == pl[k].idi, 'ペアリストIDと選択された粒子IDが一致しません'
-        assert jp.id == pl[k].idj, 'ペアリストIDと選択された粒子IDが一致しません'
+    ### 自領域内での力積計算
+    my_particles = proc.subregion.particles
+    for pl in proc.subregion.pairlist:
+        ip = my_particles[pl.i]
+        jp = my_particles[pl.j]
+        assert ip.id==pl.idi and jp.id==pl.idj, 'ペアリストIDと選択された粒子IDが一致しません'
         r = Box.periodic_distance(ip.x, ip.y, jp.x, jp.y)
         if r > Box.cutoff:
             continue
@@ -237,8 +237,32 @@ def calculate_force(proc, dt):
         ip.vy += df * dy
         jp.vx -= df * dx
         jp.vy -= df * dy
-        proc.particles[pl[k].i] = ip
-        proc.particles[pl[k].j] = jp
+        my_particles[pl.i] = ip
+        my_particles[pl.j] = jp
+    
+    ### 領域をまたいだ力積計算
+    other_particles = proc.particles_in_neighbor
+    for pl in proc.pairlist_between_neighbor:
+        ip = my_particles[pl.i]
+        jp = other_particles[pl.j]
+        assert ip.id==pl.idi and jp.id==pl.idj, 'ペアリストIDと選択された粒子IDが一致しません'
+        r = Box.periodic_distance(ip.x, ip.y, jp.x, jp.y)
+        if r > Box.cutoff:
+            continue
+        df = (24.0 * r**6 - 48.0) / r**14 * dt
+
+        dx = periodic_od(Box.xl,jp.x-ip.x)
+        dy = periodic_od(Box.yl,jp.y-ip.y)
+        ip.vx += df * dx
+        ip.vy += df * dy
+        ### 他領域の粒子の力積は追加分しか記録しない
+        jp.vx = -df * dx
+        jp.vy = -df * dy
+        my_particles[pl.i] = ip
+        other_particles[pl.j] = jp
+    proc.subregion.particles = my_particles
+    proc.particles_in_neighbor = other_particles
+
     return proc
 
 
