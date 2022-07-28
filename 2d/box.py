@@ -100,6 +100,7 @@ def kinetic_energy(proc):
 ### ペアリストを使用するので、事前に要構築
 def potential_energy(proc):
     v = 0
+    
     ### 自領域内粒子間ポテンシャル
     for pl in proc.subregion.pairlist:
         ip = proc.subregion.particles[pl.i]
@@ -110,6 +111,7 @@ def potential_energy(proc):
         if r > proc.Box.cutoff:
             continue
         v += proc.Box.Potential.potential(r) - 4.0*(1/proc.Box.cutoff**12 - 1/proc.Box.cutoff**6) 
+    
     ### 領域をまたいだポテンシャル
     for pl in proc.pairlist_between_neighbor:
         ip = proc.subregion.particles[pl.i]
@@ -120,7 +122,8 @@ def potential_energy(proc):
         if r > proc.Box.cutoff:
             continue
         v += proc.Box.Potential.potential(r) - 4.0*(1/proc.Box.cutoff**12 - 1/proc.Box.cutoff**6) 
-    v /= len(proc.subregion.pairlist) + len(proc.pairlist_between_neighbor)
+    
+    v /= len(proc.subregion.particles)
     return v
 
 # ==============================================================

@@ -271,6 +271,7 @@ def update_position(proc, dt):
     for i,p in enumerate(proc.subregion.particles):
         p.x += p.vx * dt
         p.y += p.vy * dt
+        p.x, p.y = proc.Box.periodic_coordinate(p.x, p.y)
         proc.subregion.particles[i] = p
     return proc
 

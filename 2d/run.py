@@ -70,6 +70,7 @@ for step in range(STEPS):
     for i,proc in enumerate(Machine.procs):
         Machine.procs[i] = sim.update_position(proc, dt/2)
 
+    # Machine = sdd.simple(Machine) ### 位置が動いたので空間分割やり直し...？
     Machine.communicate_particles ### 位置が動いたので通信
 
     for i,proc in enumerate(Machine.procs):
@@ -80,16 +81,15 @@ for step in range(STEPS):
 
     for i,proc in enumerate(Machine.procs):
         Machine.procs[i] = sim.update_position(proc, dt/2)
-        """
-        proc = box.periodic(proc)
-        Machine.procs[i] = proc
+
+    # Machine = sdd.simple(Machine) ### 位置が動いたので空間分割やり直し...？
+    for i,proc in enumerate(Machine.procs):
         if (step+1) % OB_INTERVAL == 0:
             sim.export_cdview(proc, step+1)   ### 情報の出力
         k += box.kinetic_energy(proc)
         v += box.potential_energy(proc)
         v_maxs.append(sim.check_vmax(proc))
+    
     print('{:10.5f} {} {} {}'.format(t, k, v, k+v))
     Machine = sim.check_pairlist(Machine, max(v_maxs), dt)
-    # Machine.communicate()   ### 1stepの計算が全て終わったら、同期通信をする.Box情報の共有も含む
 print('*** Simulation Ended! ***', file=sys.stderr)
-"""
