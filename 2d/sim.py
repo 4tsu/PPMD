@@ -104,9 +104,8 @@ class DomainPairList:
         pairlist = []
         box = proc.Box
         particles = proc.subregion.particles
-        print('#particle', len(particles))
         for i in range(len(particles)-1):
-            for j in range(i, len(particles)):
+            for j in range(i+1, len(particles)):
                 ip = particles[i]
                 jp = particles[j]
                 r = box.periodic_distance(ip.x, ip.y, jp.x, jp.y)
@@ -127,7 +126,7 @@ class DomainPairList:
         for i in range(len(my_particles)):
             for j in range(len(other_particles)):
                 ip = my_particles[i]
-                jp = other_particles[j]
+                jp = other_particles[j]   ### jが他領域の粒子
                 r = box.periodic_distance(ip.x, ip.y, jp.x, jp.y)
                 if r > box.co_p_margin:
                     continue
