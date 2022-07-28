@@ -21,7 +21,7 @@ random.seed(1)
 STEPS = 1000
 OB_INTERVAL = 50
 dt = 0.0010
-N = 100
+N = 121
 np = 4
 
 ## シミュレーション実行環境の準備
@@ -40,9 +40,10 @@ for proc in Machine.procs:
     proc.subregion.calc_radius(proc.Box)
 Machine = sim.make_pair(Machine)
 
-print(len(Machine.procs[0].subregion.pairlist))
-print(len(Machine.procs[0].pairlist_between_neighbor))
-"""
+for i in range(len(Machine.procs)):
+    print('len my pairlist', len(Machine.procs[i].subregion.pairlist))
+    print('len neigh pairlist', len(Machine.procs[i].pairlist_between_neighbor))
+
 ## 粒子の軌跡とエネルギー出力準備
 ### export_cdviewが上書き方式なので、.cdvファイルを事前にクリアしておく
 for filename in os.listdir("."):
@@ -54,6 +55,7 @@ k = 0
 v = 0
 for proc in Machine.procs:
     sim.export_cdview(proc, 0)
+"""
     k += box.kinetic_energy(proc)
     v += box.potential_energy(proc)
 print('{:10.5f} {} {} {}'.format(t, k, v, k+v))

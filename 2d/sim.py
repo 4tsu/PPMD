@@ -104,6 +104,7 @@ class DomainPairList:
         pairlist = []
         box = proc.Box
         particles = proc.subregion.particles
+        print('#particle', len(particles))
         for i in range(len(particles)-1):
             for j in range(i, len(particles)):
                 ip = particles[i]
@@ -150,9 +151,9 @@ def make_conf(Machine):
     y_min = Box.y_min
     x_max = Box.x_max
     y_max = Box.y_max
-    xppl = ceil(N/yl)
-    yppl = ceil(N/xl)
-    pitch = xl/xppl
+    xppl = ceil(sqrt(xl*N/yl))
+    yppl = ceil(sqrt(yl*N/xl))
+    pitch = min(xl/xppl, yl/yppl)
 
     ### 等間隔分割の仕方を取得
     Box = sdd.get_simple_array(Box, len(Machine.procs))
