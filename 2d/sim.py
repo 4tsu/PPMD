@@ -275,17 +275,23 @@ def make_pair(Machine):
 
 
 
-def check_pairlist(proc, dt):
+def check_vmax(proc):
     vmax2 = 0.0
-    for p in proc.particles:
+    for p in proc.subregion.particles:
         v2 = p.vx**2 + p.vy**2
         if v2 > vmax2:
             vmax2 = v2
     vmax = sqrt(vmax2)
-    proc.Box.subtract_margin(vmax*2.0*dt)
-    if proc.Box.margin_life < 0.0:
-        proc.Box.set_margin(proc.Box.margin)
-        proc = make_pair(proc)
-    return proc
+    return vmax
+
+def check_pairlist(Machine, vmax, dt):
+    box = Machine.procs[0].Box
+    box.subtract_margin(vmax*2.0*dt)
+    if box.margin_life < 0.0:
+        box.set_margin(box.margin)
+        Machine = make_pair(Machine)
+        print('Pairlist updated')
+    Machine.set_boxes(box)
+    return Machine
 
 # ---------------------------------------------------

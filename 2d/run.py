@@ -64,13 +64,16 @@ for step in range(STEPS):
     t += dt
     k = 0
     v = 0
+    v_maxs = []
+    ### 計算本体(シンプレクティック積分)
     for i,proc in enumerate(Machine.procs):
-        ### 計算本体(シンプレクティック積分)
         proc = sim.update_position(proc, dt/2)
-        """
-        proc = sim.check_pairlist(proc, dt)
+        v_maxs.append(sim.check_vmax(proc))
+    Machine = sim.check_pairlist(Machine, max(v_maxs), dt)
+    for i,proc in enumerate(Machine.procs):   ### 同期通信
         proc = sim.calculate_force(proc, dt)
         proc = sim.update_position(proc, dt/2)
+        """
         proc = box.periodic(proc)
         Machine.procs[i] = proc
         if (step+1) % OB_INTERVAL == 0:
