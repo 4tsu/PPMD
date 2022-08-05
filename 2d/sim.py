@@ -87,6 +87,7 @@ class DomainPairList:
             dpl.append(i_dpl)
 
         self.list = dpl
+        # print(dpl)
 
 
 
@@ -99,6 +100,7 @@ class DomainPairList:
             ### 隣接する領域との間で粒子ペア探索
             assert len(proc.particles_in_neighbor) != 0, "周辺粒子情報がプロセスに登録されていません"
             proc = self.search_other_region(proc)
+            # print('search_other_rigion')
         
         ### 自分の領域内の粒子ペアリスト作成
         pairlist = []
@@ -123,6 +125,8 @@ class DomainPairList:
         box = proc.Box
         my_particles = proc.subregion.particles
         other_particles = proc.particles_in_neighbor
+        # print('my', len(my_particles))
+        # print('other', len(other_particles))
         for i in range(len(my_particles)):
             for j in range(len(other_particles)):
                 ip = my_particles[i]
@@ -177,6 +181,12 @@ def make_conf(Machine):
         Machine.procs[ip].subregion.particles.append(Particle)
         assert x_min <= x < x_max, '初期配置が適切ではありません'
         assert y_min <= y < y_max, '初期配置が適切ではありません'
+    for i,proc in enumerate(Machine.procs):
+        bottom = i//xn * sd_yl + y_min
+        left   = i%xn * sd_xl + x_min
+        top    = (i//xn + 1) * sd_yl + y_min
+        right  = (i%xn + 1) * sd_xl + x_min
+        Machine.procs[i].subregion.set_limit(top, right, bottom, left)
     return Machine
 
 
@@ -219,15 +229,18 @@ def periodic_od(L,dx):
 
 ## 力の計算
 def calculate_force(proc, dt):
+    cutoffed_my = 0
+    cutoffed_other = 0
     Box = proc.Box
     ### 自領域内での力積計算
     my_particles = proc.subregion.particles
-    for pl in proc.subregion.pairlist:
-        ip = my_particles[pl.i]
-        jp = my_particles[pl.j]
-        assert ip.id==pl.idi and jp.id==pl.idj, 'ペアリストIDと選択された粒子IDが一致しません'
+    for pair in proc.subregion.pairlist:
+        ip = my_particles[pair.i]
+        jp = my_particles[pair.j]
+        assert ip.id==pair.idi and jp.id==pair.idj, 'ペアリストIDと選択された粒子IDが一致しません'
         r = Box.periodic_distance(ip.x, ip.y, jp.x, jp.y)
         if r > Box.cutoff:
+            cutoffed_my += 1
             continue
         df = (24.0 * r**6 - 48.0) / r**14 * dt
 
@@ -237,17 +250,20 @@ def calculate_force(proc, dt):
         ip.vy += df * dy
         jp.vx -= df * dx
         jp.vy -= df * dy
-        my_particles[pl.i] = ip
-        my_particles[pl.j] = jp
+        # print('{:8.6f} {:8.6f}'.format(df*dx, df*dy))
+        my_particles[pair.i] = ip
+        my_particles[pair.j] = jp
     
     ### 領域をまたいだ力積計算
     other_particles = proc.particles_in_neighbor
-    for pl in proc.pairlist_between_neighbor:
-        ip = my_particles[pl.i]
-        jp = other_particles[pl.j]
-        assert ip.id==pl.idi and jp.id==pl.idj, 'ペアリストIDと選択された粒子IDが一致しません'
+    sending_velocities = []
+    for pair in proc.pairlist_between_neighbor:
+        ip = my_particles[pair.i]
+        jp = other_particles[pair.j]
+        assert ip.id==pair.idi and jp.id==pair.idj, 'ペアリストIDと選択された粒子IDが一致しません'
         r = Box.periodic_distance(ip.x, ip.y, jp.x, jp.y)
         if r > Box.cutoff:
+            cutoffed_other += 1
             continue
         df = (24.0 * r**6 - 48.0) / r**14 * dt
 
@@ -256,12 +272,18 @@ def calculate_force(proc, dt):
         ip.vx += df * dx
         ip.vy += df * dy
         ### 他領域の粒子の力積は追加分しか記録しない
-        jp.vx = -df * dx
-        jp.vy = -df * dy
-        my_particles[pl.i] = ip
-        other_particles[pl.j] = jp
+        kp = particle.Particle(jp.id, jp.x, jp.y)
+        kp.vx = -df * dx
+        kp.vy = -df * dy
+        my_particles[pair.i] = ip
+        sending_velocities.append(kp)
+
+    assert len(sending_velocities)+cutoffed_other == len(proc.pairlist_between_neighbor), '速度の書き戻し回数が不正です'
     proc.subregion.particles = my_particles
-    proc.particles_in_neighbor = other_particles
+    proc.set_sending_velocity(sending_velocities)
+    # for p in my_particles:
+    #     print('{:8.6f} {:8.6f}'.format(p.vx, p.vy))
+    # print(cutoffed_my, cutoffed_other)
 
     return proc
 
@@ -272,6 +294,8 @@ def update_position(proc, dt):
         p.x += p.vx * dt
         p.y += p.vy * dt
         p.x, p.y = proc.Box.periodic_coordinate(p.x, p.y)
+        assert proc.Box.x_min <= p.x <= proc.Box.x_max, '粒子が境界から出ています'
+        assert proc.Box.y_min <= p.y <= proc.Box.y_max, '粒子が境界から出ています'
         proc.subregion.particles[i] = p
     return proc
 
@@ -290,12 +314,22 @@ def export_cdview(proc, step):
 
 ## ペアリスト作成
 def make_pair(Machine):
+    for i,proc in enumerate(Machine.procs):
+        Machine.procs[i].subregion.calc_center(proc.Box)
+        Machine.procs[i].subregion.calc_radius(proc.Box)
     dpl = DomainPairList(Machine)
     for i,proc in enumerate(Machine.procs):
         proc.set_domain_pair_list(dpl)
+        # print(proc.domain_pair_list.list)
     Machine.communicate_particles()
     for i,proc in enumerate(Machine.procs):
         Machine.procs[i] = proc.domain_pair_list.search_pair(proc)
+        """
+        for pair in proc.subregion.pairlist:
+                print(pair.idi, pair.idj)
+        for pair in proc.pairlist_between_neighbor:
+                print(pair.idi, pair.idj)
+        """
     return Machine
 
 
@@ -313,9 +347,10 @@ def check_pairlist(Machine, vmax, dt):
     box = Machine.procs[0].Box
     box.subtract_margin(vmax*2.0*dt)
     if box.margin_life < 0.0:
+        print('update')
         box.set_margin(box.margin)
+        Machine = sdd.simple(Machine)
         Machine = make_pair(Machine)
-        print('Pairlist updated')
     Machine.set_boxes(box)
     return Machine
 

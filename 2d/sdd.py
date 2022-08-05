@@ -64,6 +64,12 @@ class subregion:
             prmtr += ((C[j][0]-C[j-1][0])**2 + (C[j][1]-C[j-1][1])**2)**0.5
         self.perimeter = prmtr
 
+    def set_limit(self, top, right, bottom, left):
+        self.top    = top
+        self.right  = right
+        self.bottom = bottom
+        self.left   = left
+
 # ------------------------------------------------------------------------------------------
 
 def plot_fig(S, s, method_type_name):
@@ -121,24 +127,27 @@ def get_simple_array(Box, np):
 
 
 def simple(Machine):
-    Machine = get_simple_array(Machine)
+    for i,proc in enumerate(Machine.procs):
+        top    = proc.subregion.top
+        bottom = proc.subregion.bottom
+        right  = proc.subregion.right
+        left   = proc.subregion.left
+        box = proc.Box
 
-    ## 求めた配列に合わせて分割
-    sd_xl = xl/xn
-    sd_yl = yl/yn
-    for iy in range(yn):
-        bt = sd_yl*(iy+1)
-        bb = sd_yl*iy
-        for jx in range(xn):
-            br = sd_xl*(jx+1)
-            bl = sd_xl*jx
-            p = iy*xn+jx
-            Machine.procs[p].subregion.boundaries.append([0.0, 1.0, -1*bn])
-            Machine.procs[p].subregion.boundaries.append([1.0, 0.0, -1*be])
-            Machine.procs[p].subregion.boundaries.append([0.0, 1.0, -1*bs])
-            Machine.procs[p].subregion.boundaries.append([1.0, 0.0, -1*bw])
-            Machine.procs[p].subregion.center.append((bw+be)/2)
-            Machine.procs[p].subregion.center.append((bn+bs)/2)
+        particles = proc.subregion.particles
+        new_particles = []
+        for j in range(len(particles)):
+            jp = particles.pop()
+            if jp.x>right or jp.x<left or jp.y>top or jp.y<bottom:
+                iproc = int(((jp.y-box.y_min)//box.sd_yl)*box.xn + (jp.x-box.x_min)//box.sd_xl)
+                if iproc > 1:
+                    print(iproc, jp.x, jp.y)
+                    print(box.x_max, box.y_max)
+                Machine.procs[iproc].subregion.particles.append(jp)
+            else:
+                new_particles.append(jp)
+        Machine.procs[i].subregion.particles = new_particles
+
     return Machine
 
 

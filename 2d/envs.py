@@ -28,6 +28,10 @@ class Process:
     def set_domain_pair_list(self, dpl):
         self.domain_pair_list = dpl
 
+    ### calc_forceによって計算した力積を、他領域に通信するようのメモリに退避させる
+    def set_sending_velocity(self, sending_velocities):
+        self.sending_velocities = sending_velocities
+
     def receive(self):
         received_list = []
         for i,pckt in enumerate(self.receivebox):
@@ -108,22 +112,33 @@ class Machine:
                     self.procs[i].particles_in_neighbor.append(p)
     
     def communicate_velocity(self):
+        ### 各領域に格納してある、
         for i, proci in enumerate(self.procs):
-            for j, pj in enumerate(proci.particles_in_neighbor):
-                flag = False
-                for k, prock in enumerate(self.procs):
-                    if i==k:
-                        continue
-                    for l, pl in enumerate(prock.subdomain.particles):
+            ### 相互作用した粒子について、
+            # print(len(proci.sending_velocities))
+            for j, pj in enumerate(proci.sending_velocities):
+                flag = False   ### 正解のペアを見つけたらすぐにループを抜ける用のflag
+                
+                ### 他の相互作用する可能性のある領域を全探索して、該当する粒子を探して速度を書き戻す
+                for k in proci.domain_pair_list.list[i]:
+                    prock = self.procs[k[1]]
+                    assert          i == k[0], '領域ペアリストが正しく参照されていません'
+                    assert prock.rank == k[1], '領域ペアリストが正しく参照されていません'
+
+                    for l, pl in enumerate(prock.subregion.particles):
                         if pj.id != pl.id:
                             continue
+                        # print('b {:8.6f} {:8.6f}'.format(pl.vx, pl.vy))
+                        # print('j {:8.6f} {:8.6f}'.format(pj.vx, pj.vy))
                         pl.vx += pj.vx
                         pl.vy += pj.vy
-                        self.procs[k].subdomain.particles[l] = pl
+                        # print('a {:8.6f} {:8.6f}'.format(pl.vx, pl.vy))
+                        self.procs[k[1]].subregion.particles[l] = pl
                         flag = True
                         break
                     if flag:
                         break
+        self.communicate_particles()
 
 
     ## 周期境界を考えた隣接セル検出
