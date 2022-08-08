@@ -100,7 +100,6 @@ class DomainPairList:
             ### 隣接する領域との間で粒子ペア探索
             assert len(proc.particles_in_neighbor) != 0, "周辺粒子情報がプロセスに登録されていません"
             proc = self.search_other_region(proc)
-            # print('search_other_rigion')
         
         ### 自分の領域内の粒子ペアリスト作成
         pairlist = []
@@ -125,8 +124,6 @@ class DomainPairList:
         box = proc.Box
         my_particles = proc.subregion.particles
         other_particles = proc.particles_in_neighbor
-        # print('my', len(my_particles))
-        # print('other', len(other_particles))
         for i in range(len(my_particles)):
             for j in range(len(other_particles)):
                 ip = my_particles[i]
@@ -250,7 +247,6 @@ def calculate_force(proc, dt):
         ip.vy += df * dy
         jp.vx -= df * dx
         jp.vy -= df * dy
-        # print('{:8.6f} {:8.6f}'.format(df*dx, df*dy))
         my_particles[pair.i] = ip
         my_particles[pair.j] = jp
     
@@ -281,10 +277,7 @@ def calculate_force(proc, dt):
     assert len(sending_velocities)+cutoffed_other == len(proc.pairlist_between_neighbor), '速度の書き戻し回数が不正です'
     proc.subregion.particles = my_particles
     proc.set_sending_velocity(sending_velocities)
-    # for p in my_particles:
-    #     print('{:8.6f} {:8.6f}'.format(p.vx, p.vy))
-    # print(cutoffed_my, cutoffed_other)
-
+    
     return proc
 
 
@@ -320,7 +313,6 @@ def make_pair(Machine):
     dpl = DomainPairList(Machine)
     for i,proc in enumerate(Machine.procs):
         proc.set_domain_pair_list(dpl)
-        # print(proc.domain_pair_list.list)
     Machine.communicate_particles()
     for i,proc in enumerate(Machine.procs):
         Machine.procs[i] = proc.domain_pair_list.search_pair(proc)

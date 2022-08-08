@@ -140,9 +140,6 @@ def simple(Machine):
             jp = particles.pop()
             if jp.x>right or jp.x<left or jp.y>top or jp.y<bottom:
                 iproc = int(((jp.y-box.y_min)//box.sd_yl)*box.xn + (jp.x-box.x_min)//box.sd_xl)
-                if iproc > 1:
-                    print(iproc, jp.x, jp.y)
-                    print(box.x_max, box.y_max)
                 Machine.procs[iproc].subregion.particles.append(jp)
             else:
                 new_particles.append(jp)

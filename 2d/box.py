@@ -100,7 +100,6 @@ def kinetic_energy(proc):
     for p in proc.subregion.particles:
         k += p.vx ** 2
         k += p.vy ** 2
-    # k /= len(proc.subregion.particles)
     k /= 2
     return k
 
@@ -133,7 +132,6 @@ def potential_energy(proc):
             continue
         v += proc.Box.Potential.potential(r) - 4.0*(1/proc.Box.cutoff**12 - 1/proc.Box.cutoff**6) 
     
-    # v /= len(proc.subregion.particles)
     return v
 
 # ==============================================================
