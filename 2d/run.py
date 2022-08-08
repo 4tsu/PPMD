@@ -19,9 +19,9 @@ random.seed(1)
 
 
 ## シミュレーションパラメータの設定
-STEPS = 1000
-OB_INTERVAL = 20
-dt = 0.0010
+STEPS = 2000
+OB_INTERVAL = 10
+dt = 0.0020
 N = 100
 np = 4
 
@@ -59,7 +59,7 @@ for proc in Machine.procs:
     v += box.potential_energy(proc)
 k /= Machine.procs[0].Box.N
 v /= Machine.procs[0].Box.N
-print('{:10.5f} {:12.8f} {:12.8f} {:12.8f}'.format(t, k, v, k+v))
+# print('{:10.5f} {:12.8f} {:12.8f} {:12.8f}'.format(t, k, v, k+v))
 
 
 

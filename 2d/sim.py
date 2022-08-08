@@ -334,7 +334,8 @@ def check_pairlist(Machine, vmax, dt, step):
     box.subtract_margin(vmax*2.0*dt)
     if box.margin_life < 0.0:
         box.set_margin(box.margin)
-        Machine = sdd.simple(Machine)
+        # Machine = sdd.simple(Machine)
+        Machine = sdd.xybin(Machine)
         Machine = make_pair(Machine)
     Machine.set_boxes(box)
     return Machine

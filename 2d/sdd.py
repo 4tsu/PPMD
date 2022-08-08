@@ -2,6 +2,7 @@
 ## 並列シミュレーション時の空間分割手法コード
 ## ロードバランサー
 # ===============================================================================================================================
+import particle
 
 from itertools import count
 from locale import ABDAY_1
@@ -149,58 +150,88 @@ def simple(Machine):
 
 
 
-def xybin(data, S):
-    cell = S.cell
+def xybin(Machine):
+    ### 準備
+    datalist = []
+    for proc in Machine.procs:
+        for p in proc.subregion.particles:
+            datalist.append([p.id, p.x, p.y, p.vx, p.vy])
+    data = np.array(datalist)
+    ### まずはY軸方向についてソート
+    sortedIndexY = np.argsort(data, axis=0)
+
+    box = Machine.procs[0].Box
+    xn = box.xn
+    yn = box.yn
+
     Py = []
     By = []
-    sortedIndexY = np.argsort(data, axis=1)
-    dny = len(data[0])//cell[1]
-    for i in range(cell[1]):
+    numy = int(box.N//yn)
+    for i in range(yn):
         Oy = []
-        for j in range(dny+1):
-            k = i*(dny+1) + j
-            if k >= len(data[0]):
+
+        for j in range(numy+1):
+            k = i*(numy+1) + j
+            if k >= len(data):
                 break
-            Oy.append([data[0,sortedIndexY[1,k]], data[1,sortedIndexY[1,k]]])
+            Oy.append(datalist[sortedIndexY[k,2]])
+
         Py.append(Oy)
+
+    ### いちおう領域の境界も入れておこう
     for i in range(len(Py)):
         if i == 0:
-            b = 0.0
+            b = box.y_min
         else:
-            b = (Py[i-1][-1][1] + Py[i][0][1])/2
+            b = (Py[i-1][-1][2] + Py[i][0][2])/2
         if i == len(Py)-1:
-            t = 1.0
+            t = box.y_max
         else:
-            t = (Py[i][-1][1] + Py[i+1][0][1])/2
+            t = (Py[i][-1][2] + Py[i+1][0][2])/2
         By.append([t, b])
-    
-    P = []
-    B = np.zeros((len(S.Processors), 4))
-    count = np.zeros(cell[0]*cell[1])
+
+    ### 次にX軸方向についてのソート
     for h,Q in enumerate(Py):
-        idy = np.array(Q)
-        sortedIndexX = np.argsort(idy, axis=0)
-        dnx = len(Q)//cell[0]
-        for i in range(cell[0]):
-            j = (dnx+1)*i
-            k = (dnx+1)*(i+1) - 1
+        datalist = np.array(Q)
+        sortedIndexX = np.argsort(datalist, axis=0)
+        numx = int(len(Q)//xn)
+
+        k = 0
+        for i in range(xn):
+            proc_index = h*xn + i
+            Machine.procs[proc_index].subregion.particles.clear()
+            new_particles = []
+
+            ### ぴったりより一個余分に詰めていき、最後は少し少なくなるのでbreakで脱出
+            for j in range(numx+1):
+                if len(Q) <= k:
+                    break
+                pdata = datalist[sortedIndexX[k,1]]
+                p = particle.Particle(pdata[0], pdata[1], pdata[2])
+                p.set_velocity(pdata[3], pdata[4])
+                new_particles.append(p)
+                k += 1
+            
+            Machine.procs[proc_index].subregion.particles = new_particles
+
+            ### 領域の境界
             if i == 0:
-                l = 0.0
+                l = box.x_min
             else:
-                l = (Q[sortedIndexX[j-1,0]][0] + Q[sortedIndexX[j,0]][0])/2
-            if i == cell[0]-1:
-                r = 1.0
+                l = (Q[sortedIndexX[j-1,1]][1] + Q[sortedIndexX[j,1]][1])/2
+            if i == xn-1:
+                r = box.x_max
             else:
-                r = (Q[sortedIndexX[k,0]][0] + Q[sortedIndexX[k+1,0]][0])/2
-            p = h*cell[0] + i
-            S.Processors[p].boundaries.append([0.0, 1.0, -1*By[h][0]])
-            S.Processors[p].boundaries.append([1.0, 0.0, -1*r])
-            S.Processors[p].boundaries.append([0.0, 1.0, -1*By[h][1]])
-            S.Processors[p].boundaries.append([1.0, 0.0, -1*l])
-            S.Processors[p].center.append((r+l)/2)
-            S.Processors[p].center.append((By[h][0]+By[h][1])/2)
-    S.reallocate(data)
-    return S
+                r = (Q[sortedIndexX[j,0]][1] + Q[sortedIndexX[j+1,0]][1])/2
+            
+            Machine.procs[proc_index].subregion.boundaries.append([0.0, 1.0, -1*By[h][0]])
+            Machine.procs[proc_index].subregion.boundaries.append([1.0, 0.0, -1*r])
+            Machine.procs[proc_index].subregion.boundaries.append([0.0, 1.0, -1*By[h][1]])
+            Machine.procs[proc_index].subregion.boundaries.append([1.0, 0.0, -1*l])
+    
+    return Machine
+
+
 
 ##  Voronoi分割の不具合を避けるための、初期分割やりなおし
 ## 空になってしまった領域を、必要に応じて他に割り当てるので、分散した計算
