@@ -25,22 +25,32 @@ class SimulationBox:
 
         self.Potential = Potential()
 
+    ## 下の関数用
+    def modify(self, x, x_max, x_min, L):
+        if x > x_max:
+            x -= L
+        elif x < x_min:
+            x += L
+        return x
+
     ## 周期境界条件の適用
     def periodic_coordinate(self, x, y):
-        if x > self.x_max:
-            x -= self.xl
-        elif x < self.x_min:
-            x += self.xl
-        if y > self.y_max:
-            y -= self.yl
-        elif y < self.y_min:
-            y += self.yl
+        if not (self.x_min <= x <= self.x_max):
+            while not (self.x_min <= x <= self.x_max):
+                x = self.modify(x, self.x_max, self.x_min, self.xl)
+                # print(x)
+        if not (self.y_min <= y <= self.y_max):
+            while not (self.y_min <= y <= self.y_max):
+                y = self.modify(y, self.y_max, self.y_min, self.yl)
+        if not (self.x_min<x<self.x_max and self.y_min<y<self.y_max):
+            print(x,y)
         return x, y
     
     ## 周期境界条件を考慮した距離を返す
     def periodic_distance(self, x1, y1, x2, y2):
         rx = min((x1-x2)**2, (self.xl-abs(x1-x2))**2)
         ry = min((y1-y2)**2, (self.yl-abs(y1-y2))**2)
+        assert 0<=rx<=(self.xl/2)**2 and 0<=ry<=(self.yl/2)**2, '周期境界条件の補正に失敗しています[rx={},ry={}]'.format(rx, ry)
         return (rx + ry)**0.5
     
     def add_particle(self, particle):
@@ -90,7 +100,7 @@ def kinetic_energy(proc):
     for p in proc.subregion.particles:
         k += p.vx ** 2
         k += p.vy ** 2
-    k /= len(proc.subregion.particles)
+    # k /= len(proc.subregion.particles)
     k /= 2
     return k
 
@@ -123,7 +133,7 @@ def potential_energy(proc):
             continue
         v += proc.Box.Potential.potential(r) - 4.0*(1/proc.Box.cutoff**12 - 1/proc.Box.cutoff**6) 
     
-    v /= len(proc.subregion.particles)
+    # v /= len(proc.subregion.particles)
     return v
 
 # ==============================================================

@@ -18,11 +18,11 @@ random.seed(1)
 # ------------------------------------------------------
 
 ## シミュレーションパラメータの設定
-STEPS = 5
+STEPS = 1000
 OB_INTERVAL = 1
 dt = 0.0010
 N = 100
-np = 2
+np = 1
 
 ## シミュレーション実行環境の準備
 Machine = envs.Machine(np)   ### 並列プロセス数
@@ -61,8 +61,7 @@ for proc in Machine.procs:
 ## ループ
 for step in range(STEPS):
     t += dt
-    k = 0
-    v = 0
+    
     ### 計算本体(シンプレクティック積分)
     ### プロセスに関するループの頭が同期ポイントにあたる
     v_maxs = []
@@ -70,13 +69,7 @@ for step in range(STEPS):
     Machine.communicate_particles()
     for i,proc in enumerate(Machine.procs):
         Machine.procs[i] = sim.update_position(proc, dt/2)
-    # Machine = sdd.simple(Machine)   ### 位置が動いたので空間分割やり直し...？
     Machine.communicate_particles()   ### 位置が動いたので通信
-
-    for i,proc in enumerate(Machine.procs):
-        for p in Machine.procs[i].subregion.particles:
-            # print('{:8.6f} {:8.6f}'.format(p.x, p.y))
-            pass
 
     for i,proc in enumerate(Machine.procs):
         """
@@ -89,22 +82,27 @@ for step in range(STEPS):
     Machine.communicate_velocity() ### 速度を更新したので通信
     for i,proc in enumerate(Machine.procs):
         Machine.procs[i] = sim.update_position(proc, dt/2)
-    # Machine = sdd.simple(Machine) ### 位置が動いたので空間分割やり直し...？
     Machine.communicate_particles() ### 位置が動いたので通信
 
+    for i,proc in enumerate(Machine.procs):
+        for p in Machine.procs[i].subregion.particles:
+            # print('{:8.6f} {:8.6f}'.format(p.x, p.y))
+            # print('{:8.6f} {:8.6f}'.format(p.vx, p.vy))
+            pass
 
-    # Machine = sdd.simple(Machine) ### 位置が動いたので空間分割やり直し...？
+   # Machine = sdd.simple(Machine) ### 位置が動いたので空間分割やり直し...？
+    k = 0
+    v = 0
     for i,proc in enumerate(Machine.procs):
         if (step+1) % OB_INTERVAL == 0:
             sim.export_cdview(proc, step+1)   ### 情報の出力
         k += box.kinetic_energy(proc)
         v += box.potential_energy(proc)
-        k /= Machine.np
-        v /= Machine.np
-
         v_maxs.append(sim.check_vmax(proc))
-    print('{:10.5f} {} {} {}'.format(t, k, v, k+v))
+    k /= Machine.procs[0].Box.N
+    v /= Machine.procs[0].Box.N
+    print('{:10.5f} {:10.6f} {:10.6f} {:10.6f}'.format(t, k, v, k+v))
     # print(t, max(v_maxs))
     ### 空間分割は、ペアリストの更新と同じタイミングで行っている
-    Machine = sim.check_pairlist(Machine, max(v_maxs), dt)
+    Machine = sim.check_pairlist(Machine, max(v_maxs), dt, step+1)
 print('*** Simulation Ended! ***', file=sys.stderr)

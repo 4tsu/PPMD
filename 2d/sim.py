@@ -324,12 +324,6 @@ def make_pair(Machine):
     Machine.communicate_particles()
     for i,proc in enumerate(Machine.procs):
         Machine.procs[i] = proc.domain_pair_list.search_pair(proc)
-        """
-        for pair in proc.subregion.pairlist:
-                print(pair.idi, pair.idj)
-        for pair in proc.pairlist_between_neighbor:
-                print(pair.idi, pair.idj)
-        """
     return Machine
 
 
@@ -343,11 +337,10 @@ def check_vmax(proc):
     vmax = sqrt(vmax2)
     return vmax
 
-def check_pairlist(Machine, vmax, dt):
+def check_pairlist(Machine, vmax, dt, step):
     box = Machine.procs[0].Box
     box.subtract_margin(vmax*2.0*dt)
     if box.margin_life < 0.0:
-        print('update')
         box.set_margin(box.margin)
         Machine = sdd.simple(Machine)
         Machine = make_pair(Machine)
