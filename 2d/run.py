@@ -20,10 +20,10 @@ random.seed(1)
 
 ## シミュレーションパラメータの設定
 STEPS = 1000
-OB_INTERVAL = 1
+OB_INTERVAL = 20
 dt = 0.0010
 N = 100
-np = 1
+np = 4
 
 
 
