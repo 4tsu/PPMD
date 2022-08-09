@@ -100,6 +100,9 @@ class DomainPairList:
             ### 隣接する領域との間で粒子ペア探索
             assert len(proc.particles_in_neighbor) != 0, "周辺粒子情報がプロセスに登録されていません"
             proc = self.search_other_region(proc)
+        ### なければクリア
+        else:
+            proc.pairlist_between_neighbor.clear()
         
         ### 自分の領域内の粒子ペアリスト作成
         pairlist = []
