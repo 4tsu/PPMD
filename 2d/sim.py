@@ -226,9 +226,11 @@ def periodic_od(L,dx):
 
 ## 力の計算
 def calculate_force(proc, dt):
+    proc.start_watch()
     cutoffed_my = 0
     cutoffed_other = 0
     Box = proc.Box
+
     ### 自領域内での力積計算
     my_particles = proc.subregion.particles
     for pair in proc.subregion.pairlist:
@@ -278,11 +280,14 @@ def calculate_force(proc, dt):
     proc.subregion.particles = my_particles
     proc.set_sending_velocity(sending_velocities)
     
+
+    proc.stop_watch()
     return proc
 
 
 
 def update_position(proc, dt):
+    proc.start_watch()
     for i,p in enumerate(proc.subregion.particles):
         p.x += p.vx * dt
         p.y += p.vy * dt
@@ -290,6 +295,8 @@ def update_position(proc, dt):
         assert proc.Box.x_min <= p.x <= proc.Box.x_max, '粒子が境界から出ています'
         assert proc.Box.y_min <= p.y <= proc.Box.y_max, '粒子が境界から出ています'
         proc.subregion.particles[i] = p
+    
+    proc.stop_watch()
     return proc
 
 

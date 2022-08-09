@@ -12,6 +12,7 @@ import sim
 import sys
 import os
 import random
+import time
 
 random.seed(1)
 
@@ -19,7 +20,7 @@ random.seed(1)
 
 
 ## シミュレーションパラメータの設定
-STEPS = 1000
+STEPS = 100
 OB_INTERVAL = 10
 dt = 0.0020
 N = 100
@@ -32,7 +33,7 @@ sdd_num = 2   ### ロードバランサーの種類
 Machine = envs.Machine(np)   ### 並列プロセス数
 
 ## シミュレーションする系の準備
-Box = box.SimulationBox([10, 10], 2.0, N)
+Box = box.SimulationBox([20, 20], 2.0, N)
 Box.set_margin(0.5)
 Machine.set_boxes(Box)   ### シミュレーションボックスのグローバルな設定はグローバルに共有
 Machine = sim.make_conf(Machine)   ### 初期配置
@@ -48,9 +49,12 @@ Machine = sim.make_pair(Machine)
 
 ## 粒子の軌跡とエネルギー出力準備
 ### export_cdviewが上書き方式なので、.cdvファイルを事前にクリアしておく
+### 他の追記式ファイルも同様
 for filename in os.listdir("."):
     if '.cdv' in filename:
         os.remove(filename)
+    elif 'calc_time_{}.dat'.format(sdd_num)==filename:
+        os.remove('calc_time.dat')
 ### step 0 情報
 t = 0
 k = 0
@@ -68,15 +72,20 @@ print('{:10.5f} {:12.8f} {:12.8f} {:12.8f}'.format(t, k, v, k+v))
 ## ループ
 for step in range(STEPS):
     t += dt
-
+    calc_time = 0
+    
     ### 計算本体(シンプレクティック積分)
     ### 位置の更新t/2
     Machine.communicate_particles()
+    T = []
     for i,proc in enumerate(Machine.procs):
         Machine.procs[i] = sim.update_position(proc, dt/2)
+        T.append(Machine.procs[i].time_result)
+    calc_time += max(T)
     Machine.communicate_particles()   ### 位置が動いたので通信
 
     ### 速度の更新
+    T = []
     for i,proc in enumerate(Machine.procs):
         """
         ### debug
@@ -86,11 +95,16 @@ for step in range(STEPS):
             print(pair.idi, pair.idj)
         """
         Machine.procs[i] = sim.calculate_force(proc, dt)
+        T.append(Machine.procs[i].time_result)
+    calc_time += max(T)
     Machine.communicate_velocity() ### 速度を更新したので通信
     
     ### 位置の更新t/2
+    T = []
     for i,proc in enumerate(Machine.procs):
         Machine.procs[i] = sim.update_position(proc, dt/2)
+        T.append(Machine.procs[i].time_result)
+    calc_time += max(T)
     Machine.communicate_particles() ### 位置が動いたので通信
     
     """
@@ -123,6 +137,9 @@ for step in range(STEPS):
         # print('Pairlist Update/Running Load Balancer')
         Machine = sdd.sdd(Machine, sdd_num)   ### 選択した番号のロードバランサーを実行
         Machine = sim.make_pair(Machine)   ### ペアリスト更新
+    
+    ### このステップでの計算/通信コストを出力
+    envs.export_cost(calc_time, step+1, 'calc_time_{}.dat'.format(sdd_num))
 
 
 

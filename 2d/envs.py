@@ -9,6 +9,7 @@ import random
 from re import X
 from matplotlib.pyplot import phase_spectrum
 import numpy as np
+import time
 
 # --------------------------------------------------------------------
 
@@ -40,6 +41,15 @@ class Process:
                 received_list.append(i)
         self.packets = [self.receivebox[i] for i in range(len(self.receivebox)) if i not in received_list]
         self.receivebox.clear()
+
+    def start_watch(self):
+        self.time_result = 0
+        self.start = time.time()
+
+    def stop_watch(self):
+        assert self.start!=0, '計測が始まっていません'
+        self.time_result = time.time() - self.start
+        self.start = 0
 
 
 
@@ -287,3 +297,11 @@ class Machine:
     def get_comm_max(self):
         return np.max(self.commtable)
 
+# --------------------------------------------------------------------------------------------------------------------------
+
+### 計算/通信の時間/量を記録する
+def export_cost(t, step, filename):
+    with open(filename, 'a') as f:
+        f.write('{} {}\n'.format(step, t))
+
+# ==========================================================================================================================
