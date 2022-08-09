@@ -233,32 +233,49 @@ def xybin(Machine):
 
 
 
-##  Voronoi分割の不具合を避けるための、初期分割やりなおし
+## Voronoi分割の不具合を避けるための、初期等間隔分割やりなおし
 ## 空になってしまった領域を、必要に応じて他に割り当てるので、分散した計算
 ## 空の領域を、最も粒子数の多い領域(target)に突っ込んで、半分ずつ分ける
-def voronoi_init(data, S):
-    while min(S.count()) == 0:
-        for i in range(len(S.Processors)):
-            counts_np = np.array(S.count())
+def voronoi_init(Machine):
+    while min(Machine.count()) == 0:
+        for i in range(len(Machine.procs)):
+            counts_np = np.array(Machine.count())
+            
             if counts_np[i] == 0:
                 target_j = np.argmax(counts_np)
-                target_right  = S.Processors[target_j].boundaries[1][2]*-1
-                target_left   = S.Processors[target_j].boundaries[3][2]*-1
-                target_top    = S.Processors[target_j].boundaries[0][2]*-1
-                target_bottom = S.Processors[target_j].boundaries[2][2]*-1
+                target_right  = Machine.procs[target_j].subregion.boundaries[1][2]*-1
+                target_left   = Machine.procs[target_j].subregion.boundaries[3][2]*-1
+                target_top    = Machine.procs[target_j].subregion.boundaries[0][2]*-1
+                target_bottom = Machine.procs[target_j].subregion.boundaries[2][2]*-1
                 target_width = target_right - target_left
+            
+                center_line = (target_right - target_width*0.5)*-1
                 ### 領域の左側は、空だったプロセスに 
-                S.Processors[i].boundaries[3][2] = target_left*-1
-                S.Processors[i].boundaries[1][2] = (target_right - target_width*0.5)*-1
-                S.Processors[i].boundaries[0][2] = target_top*-1
-                S.Processors[i].boundaries[2][2] = target_bottom*-1
-                S.Processors[i].center[0] = target_left + target_width*0.25
-                S.Processors[i].center[1] = (target_bottom + target_top)*0.5
+                Machine.procs[i].subregion.boundaries[3][2] = target_left*-1
+                Machine.procs[i].subregion.boundaries[1][2] = center_line
+                Machine.procs[i].subregion.boundaries[0][2] = target_top*-1
+                Machine.procs[i].subregion.boundaries[2][2] = target_bottom*-1
+                Machine.procs[i].subregion.center[0] = target_left + target_width*0.25
+                Machine.procs[i].subregion.center[1] = (target_bottom + target_top)*0.5
                 ### 領域の右側は、もともといたプロセスに
-                S.Processors[target_j].boundaries[3][2] = (target_right - target_width*0.5)*-1
-                S.Processors[target_j].center[0] = target_right - target_width*0.25
-                S.reallocate(data)
-    return S
+                Machine.procs[target_j].subregion.boundaries[3][2] = center_line
+                Machine.procs[target_j].subregion.center[0] = target_right - target_width*0.25
+
+                ### 実際の粒子割当
+                target_j_particles = []
+                i_particles = []
+                for p in Machine.procs[target_j].subregion.particles:
+                    if p.x > centerline:
+                        target_j_particles.append(p)
+                    elif p.x <= centerline:
+                        i_particles.append(p)
+                
+                Machine.procs[i].subregion.particles        = i_particles
+                Machine.procs[target_j].subregion.particles = target_j_particles
+
+    return Machine
+
+
 
 ## ボロノイ分割の、各粒子を最も近いボロノイ中心点の領域に所属させるメソッド
 def voronoi_allocate(data, S, bias):

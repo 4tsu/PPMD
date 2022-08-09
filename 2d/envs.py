@@ -257,8 +257,8 @@ class Machine:
             
     def count(self):
         counts = []
-        for p in self.procs:
-            counts.append(len(p.particles))
+        for proc in self.procs:
+            counts.append(len(proc.subregion.particles))
         return counts
 
     def calc_all_perimeter(self):

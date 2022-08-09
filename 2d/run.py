@@ -19,8 +19,8 @@ random.seed(1)
 
 
 ## シミュレーションパラメータの設定
-STEPS = 2000
-OB_INTERVAL = 10
+STEPS = 1
+OB_INTERVAL = 1
 dt = 0.0020
 N = 100
 np = 4
@@ -35,6 +35,7 @@ Box = box.SimulationBox([10, 10], 2.0, N)
 Box.set_margin(0.5)
 Machine.set_boxes(Box)   ### シミュレーションボックスのグローバルな設定はグローバルに共有
 Machine = sim.make_conf(Machine)   ### 初期配置
+Machine = sdd.voronoi_init(Machine)   ### ボロノイ分割の場合は、ゼロ粒子領域が生じないようにしておく
 Machine = sim.set_initial_velocity(1.0, Machine)   ### 初速
 ### 最初のペアリスト作成
 for proc in Machine.procs:
