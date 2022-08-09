@@ -20,7 +20,7 @@ random.seed(1)
 
 
 ## シミュレーションパラメータの設定
-STEPS = 100
+STEPS = 1000
 OB_INTERVAL = 10
 dt = 0.0020
 N = 100
@@ -54,7 +54,7 @@ for filename in os.listdir("."):
     if '.cdv' in filename:
         os.remove(filename)
     elif 'calc_time_{}.dat'.format(sdd_num)==filename:
-        os.remove('calc_time.dat')
+        os.remove(filename)
 ### step 0 情報
 t = 0
 k = 0
