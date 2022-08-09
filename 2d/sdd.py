@@ -23,22 +23,49 @@ class subregion:
         self.center = []   ### 領域中心
         self.boundaries = []   ### 領域境界
 
+    ### 領域中心を計算する
     def calc_center(self, box):
+        xl = box.xl
+        yl = box.yl
         P = self.particles
+        
         if not len(P) == 0:
+            ### 一点てきとうに決めて、そこからの相対位置ベクトルで中心を計算
+            ### シミュレーションボックスの境界をまたいでも正しく計算できるよう
+            origin_px = P[0].x
+            origin_py = P[0].y
             sx = 0
             sy = 0
-            for i in range(len(P)):
-                sx += P[i].x
-                sy += P[i].y
+            for i,p in enumerate(P):
+                rx_list = np.array([abs(p.x-origin_px), abs(p.x-origin_px-xl), abs(p.x-origin_px+xl)])
+                if np.argmin(rx_list)==0:
+                    rx = p.x - origin_px
+                elif np.argmin(rx_list)==1:
+                    rx = p.x - origin_px - xl
+                else:
+                    rx = p.x - origin_px + xl
+                    
+                ry_list = np.array([abs(p.y-origin_py), abs(p.y-origin_py-yl), abs(p.y-origin_py+yl)])
+                if np.argmin(ry_list)==0:
+                    ry = p.y - origin_py
+                elif np.argmin(ry_list)==1:
+                    ry = p.y - origin_py - yl
+                else:
+                    ry = p.y - origin_py + yl
+
+                sx += rx
+                sy += ry
+
             sx /= len(P)
             sy /= len(P)
+            sx += origin_px
+            sy += origin_py
             sx, sy = box.periodic_coordinate(sx, sy)
             assert box.x_max>sx>box.x_min and box.y_max>sy>box.y_min, 'center value is out of range!'
             self.center.clear()
             self.center.append(sx)
             self.center.append(sy)
-
+    
     def calc_radius(self, box):
         r_max = 0
         for p in self.particles:
