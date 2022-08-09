@@ -19,11 +19,12 @@ random.seed(1)
 
 
 ## シミュレーションパラメータの設定
-STEPS = 1
-OB_INTERVAL = 1
+STEPS = 1000
+OB_INTERVAL = 10
 dt = 0.0020
 N = 100
 np = 4
+sdd_num = 2   ### ロードバランサーの種類
 
 
 
@@ -35,7 +36,7 @@ Box = box.SimulationBox([10, 10], 2.0, N)
 Box.set_margin(0.5)
 Machine.set_boxes(Box)   ### シミュレーションボックスのグローバルな設定はグローバルに共有
 Machine = sim.make_conf(Machine)   ### 初期配置
-Machine = sdd.voronoi_init(Machine)   ### ボロノイ分割の場合は、ゼロ粒子領域が生じないようにしておく
+Machine = sdd.sdd_init(Machine, sdd_num)   ### 選択した番号のロードバランサーを実行
 Machine = sim.set_initial_velocity(1.0, Machine)   ### 初速
 ### 最初のペアリスト作成
 for proc in Machine.procs:
@@ -60,7 +61,7 @@ for proc in Machine.procs:
     v += box.potential_energy(proc)
 k /= Machine.procs[0].Box.N
 v /= Machine.procs[0].Box.N
-# print('{:10.5f} {:12.8f} {:12.8f} {:12.8f}'.format(t, k, v, k+v))
+print('{:10.5f} {:12.8f} {:12.8f} {:12.8f}'.format(t, k, v, k+v))
 
 
 
@@ -117,8 +118,12 @@ for step in range(STEPS):
     
     ### ペアリストの有効性チェック、必要があれば更新
     ### 空間分割は、ペアリストの更新と同じタイミングで行っている
-    Machine = sim.check_pairlist(Machine, max(v_maxs), dt, step+1)
+    Machine, update = sim.check_pairlist(Machine, max(v_maxs), dt)
+    if update:
+        # print('Pairlist Update/Running Load Balancer')
+        Machine = sdd.sdd(Machine, sdd_num)   ### 選択した番号のロードバランサーを実行
+        Machine = sim.make_pair(Machine)   ### ペアリスト更新
 
 
 
-print('*** Simulation Ended! ***', file=sys.stderr)
+print('*** Simulation has Ended! ***', file=sys.stderr)

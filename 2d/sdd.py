@@ -3,6 +3,7 @@
 ## ロードバランサー
 # ===============================================================================================================================
 import particle
+import sim
 
 from itertools import count
 from locale import ABDAY_1
@@ -98,34 +99,29 @@ class subregion:
         self.bottom = bottom
         self.left   = left
 
+    def set_bias(self, bias):
+        self.bias = bias
+
+
 # ------------------------------------------------------------------------------------------
 
-def plot_fig(S, s, method_type_name):
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    colorlist =  ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
-    for c,p in enumerate(S.Processors):
-        clr = colorlist[c%10]
-        D = np.array(p.members)
-        if not len(D) == 0:
-            plt.scatter(D[:,0], D[:,1], c=clr)
-    plt.xlim(0,1)
-    plt.ylim(0,1)
-    plt.xticks([])
-    plt.yticks([])
-    ax.set_aspect('equal')
-    fgnm = "{}_iteration#{:0=3}.png".format(method_type_name, s+1)
-    plt.title(fgnm)
-    plt.savefig(fgnm)
-    # plt.show()
-    plt.close()
+def sdd_init(Machine, sdd_num):
+    if sdd_num==0:
+        return Machine
+    elif sdd_num==1:
+        return xybin(Machine)
+    elif sdd_num==2:
+        return voronoimc(Machine)
 
 
 
-def ideal(data, cell):
-    N = cell[0]*cell[1]
-    icount = len(data[0])/N
-    return icount
+def sdd(Machine, sdd_num):
+    if sdd_num==0:
+        return simple(Machine)
+    elif sdd_num==1:
+        return xybin(Machine)
+    elif sdd_num==2:
+        return voronoimc(Machine)
 
 
 
@@ -299,101 +295,112 @@ def voronoi_init(Machine):
                 
                 Machine.procs[i].subregion.particles        = i_particles
                 Machine.procs[target_j].subregion.particles = target_j_particles
+    
+    ## バイアスをゼロにしておく
+    for i in range(Machine.np):
+        Machine.procs[i].subregion.set_bias(0.0)
 
     return Machine
 
 
 
 ## ボロノイ分割の、各粒子を最も近いボロノイ中心点の領域に所属させるメソッド
-def voronoi_allocate(data, S, bias):
+def voronoi_allocate(Machine, bias):
+    xl = Machine.procs[0].Box.xl
+    yl = Machine.procs[0].Box.yl
     ### 後の計算用に、中心点のデータをnumpyにしておく
-    center_np = np.zeros((len(S.Processors),2))
-    for i in range(len(S.Processors)):
-        S.Processors[i].members.clear()
-        center_np[i] = np.array([S.Processors[i].center])
+    center_np = np.zeros((Machine.np,2))
+    for i,proc in enumerate(Machine.procs):
+        center_np[i] = np.array([proc.subregion.center])
+    
     ### 各粒子を、最もボロノイ中心点が近い領域に所属させる
-    for d in range(len(data[0])):
+    for i,proc in enumerate(Machine.procs):
         ### 周期境界を考えた、最も近いボロノイ中心点算出
-        r2_np = (data[0][d] - center_np[:,0])**2 + (data[1][d] - center_np[:,1])**2 - bias
-        r2_np_xreverse = (1 - abs(data[0][d] - center_np[:,0]))**2 + (data[1][d] - center_np[:,0])**2 - bias
-        r2_np_yreverse = abs(data[0][d] - center_np[:,0])**2 + (1 - abs(data[1][d] - center_np[:,0]))**2 - bias
-        r2_np_xyreverse = (1 - abs(data[0][d] - center_np[:,0]))**2 + (1 - abs(data[1][d] - center_np[:,0]))**2 - bias
-        minimums = np.array([r2_np.min(), r2_np_xreverse.min(), r2_np_yreverse.min(), r2_np_xyreverse.min()])
-        ### calc_center()用に、境界をまたいで中心点にアクセスする粒子は、周期境界を作用させた座標を入れておく
-        if np.argmin(minimums) == 0:
-            S.Processors[np.argmin(r2_np)].members.append([data[0][d], data[1][d], data[2][d], data[0][d], data[1][d]])
-        elif np.argmin(minimums) == 1:
-            if data[0][d] < 0.5:
-                x_cross = data[0][d] + 1.0
+        for j in range(len(proc.subregion.particles)):
+            p = Machine.procs[i].subregion.particles.pop()
+            r2_np = (p.x - center_np[:,0])**2 + (p.y - center_np[:,1])**2 - bias
+            r2_np_xreverse = (xl - abs(p.x - center_np[:,0]))**2 + (p.y - center_np[:,0])**2 - bias
+            r2_np_yreverse = (p.x - center_np[:,0])**2 + (yl - abs(p.y - center_np[:,0]))**2 - bias
+            r2_np_xyreverse = (xl - abs(p.x - center_np[:,0]))**2 + (yl - abs(p.y - center_np[:,0]))**2 - bias
+            minimums = np.array([r2_np.min(), r2_np_xreverse.min(), r2_np_yreverse.min(), r2_np_xyreverse.min()])
+
+            ### シミュレーションボックスの境界をまたがない
+            if np.argmin(minimums) == 0:
+                Machine.procs[np.argmin(r2_np)].subregion.particles.append(p)
+            ### x方向はまたぐ
+            elif np.argmin(minimums) == 1:
+                Machine.procs[np.argmin(r2_np_xreverse)].subregion.particles.append(p)
+            ### y方向はまたぐ
+            elif np.argmin(minimums) == 2:
+                Machine.procs[np.argmin(r2_np_yreverse)].subregion.particles.append(p)
+            ### xyともにまたぐ
             else:
-                x_cross = data[0][d] - 1.0
-            S.Processors[np.argmin(r2_np_xreverse)].members.append([data[0][d], data[1][d], data[2][d], x_cross, data[1][d]])
-        elif np.argmin(minimums) == 2:
-            if data[1][d] < 0.5:
-                y_cross = data[0][d] + 1.0
-            else:
-                y_cross = data[1][d] - 1.0
-            S.Processors[np.argmin(r2_np_yreverse)].members.append([data[0][d], data[1][d], data[2][d], data[0][d], y_cross])
-        else:
-            if data[0][d] < 0.5:
-                x_cross = data[0][d] + 1.0
-            else:
-                x_cross = data[0][d] - 1.0
-            if data[1][d] < 0.5:
-                y_cross = data[0][d] + 1.0
-            else:
-                y_cross = data[1][d] - 1.0
-            S.Processors[np.argmin(r2_np_xyreverse)].members.append([data[0][d], data[1][d], data[2][d], x_cross, y_cross])
-    return S
+                Machine.procs[np.argmin(r2_np_xyreverse)].subregion.particles.append(p)
+
+    return Machine
+
+
 
 ## モンテカルロ式に計算負荷分配を調節する
 ### iteration：アルゴリズムの最大繰り返し回数、alpha：biasの変化係数
 ### early_stop_range：繰り返し時のearly stopを、理想値のどれくらいで発動させるか
-def voronoimc(data, S, cutoff, 
+def voronoimc(Machine,
               iteration=50, alpha=0.0005, early_stop_range=0.01):
     ## 各粒子は、最も近い中心点の領域の所属となる。これをそのまま実装している。
     ## preparation
     method_type_name = 'voronoimc'
-    print('Iteration =', iteration)
-    S = simple(data, S)   ### 最初は等間隔分割
-    S = voronoi_init(data, S)
-    S.calc_all_center()   ### ボロノイ中心点を計算
-    bias = np.zeros(len(S.Processors))
+    Machine = simple(Machine)   ### 最初は等間隔分割
+    Machine = voronoi_init(Machine)   ### 等間隔分割で不具合が出たらカバー
 
     ## 1.assigned to the cluster with the closest center
-    S = voronoi_allocate(data, S, bias)
-    plot_fig(S, -1, method_type_name)   ### 分割初期状態の図
-    ## 2.bias is initially set to zero
-
-    S.calc_all_center(across_border=True)
-    counts = S.count()   ### estimates work-load by using # of particles
-    print('step', 0, 'count', S.count())
+    ## 2.bias is initially set to zero 
+    ### ↑シミュレーション途中のときはバイアスは前回の値を引き継ぐ
+    bias = np.zeros(Machine.np)
+    for i,proc in enumerate(Machine.procs):
+        proc.subregion.calc_center(proc.Box)
+        proc.subregion.calc_radius(proc.Box)
+        bias[i] = proc.subregion.bias
+    Machine = voronoi_allocate(Machine, bias)
+    # plot_fig(Machine)   ### 分割初期状態の図
+    
+    for proc in Machine.procs:
+        proc.subregion.calc_center(proc.Box)
+    counts = Machine.count()   ### estimates work-load by using # of particles
+    # print('step', 0, 'count', Machine.count())
     
     ## iteration
     ### early stopのために、理想的な計算負荷を見積もっておく
     ideal_count_max = ceil(average(counts)*(1+early_stop_range))
     for s in range(iteration):
-        # S.detect_adjacent(cutoff)
-        S.detect_neighbors(cutoff)
-        counts = S.count()
+        dpl = sim.DomainPairList(Machine)
+        counts = Machine.count()
         n = np.array(counts)
-        for i,p in enumerate(S.Processors):
-            for j in p.neighbors:
+        for proc_list in dpl.list:
+            for domain_pair in proc_list:
+                i = domain_pair[0]
+                j = domain_pair[1]
                 ## 3.modifying "bi"
+                bias[i] -= alpha*0.01*(n[i] - n[j])
                 bias[j] += alpha*0.01*(n[i] - n[j])
-
+        
         ## 4.Atoms move to another cluster or stay
-        S = voronoi_allocate(data, S, bias)
-        S.calc_all_center(across_border=True)
+        Machine = voronoi_allocate(Machine, bias)
+        for proc in Machine.procs:
+            proc.subregion.calc_center(proc.Box)
        
-        #  print('step', s+1, 'bias', bias, 'count', S.count())
-        print('step', s+1, 'count', S.count())
-        if (s+1)%1 == 0:
-            plot_fig(S, s, method_type_name)
-        if max(S.count()) <= ideal_count_max:
-            print('***Early Stop***')
+        # print('step', s+1, 'bias', bias, 'count', S.count())
+        # print('step', s+1, 'count', Machine.count())
+        # if (s+1)%1 == 0:
+        #     plot_fig(Machine, method_type_name)
+        if max(Machine.count()) <= ideal_count_max:
+            # print('***Early Stop***')
             break
-    return S
+
+    ### 次回の空間分割のために、バイアスは保存しておく
+    for i in range(Machine.np):
+        Machine.procs[i].subregion.set_bias(bias[i])
+
+    return Machine
 
 def voronoi2(data, S, cutoff, iteration=50, alpha=0.05):
     ## method from "R. Koradi et al. Comput. Phys. Commun. 124(2000) 139"
@@ -455,4 +462,34 @@ def voronoi2(data, S, cutoff, iteration=50, alpha=0.05):
         if (s+1)%2 == 0:
             plot_fig(S, s, method_type_name)
     return S
+
+
+
+def plot_fig(S, s, method_type_name):
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    colorlist =  ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+    for c,p in enumerate(S.Processors):
+        clr = colorlist[c%10]
+        D = np.array(p.members)
+        if not len(D) == 0:
+            plt.scatter(D[:,0], D[:,1], c=clr)
+    plt.xlim(0,1)
+    plt.ylim(0,1)
+    plt.xticks([])
+    plt.yticks([])
+    ax.set_aspect('equal')
+    fgnm = "{}_iteration#{:0=3}.png".format(method_type_name, s+1)
+    plt.title(fgnm)
+    plt.savefig(fgnm)
+    # plt.show()
+    plt.close()
+
+
+
+def ideal(data, cell):
+    N = cell[0]*cell[1]
+    icount = len(data[0])/N
+    return icount
+
 # ========================================================================================

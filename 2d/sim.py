@@ -329,16 +329,15 @@ def check_vmax(proc):
     vmax = sqrt(vmax2)
     return vmax
 
-def check_pairlist(Machine, vmax, dt, step):
+def check_pairlist(Machine, vmax, dt):
     box = Machine.procs[0].Box
     box.subtract_margin(vmax*2.0*dt)
     if box.margin_life < 0.0:
         box.set_margin(box.margin)
-        # Machine = sdd.simple(Machine)
-        # Machine = sdd.xybin(Machine)
-        Machine = sdd.voronoimc(Machine)
-        Machine = make_pair(Machine)
-    Machine.set_boxes(box)
-    return Machine
+        Machine.set_boxes(box)
+        return Machine, True
+    else:
+        Machine.set_boxes(box)
+        return Machine, False
 
 # ---------------------------------------------------
