@@ -25,7 +25,7 @@ OB_INTERVAL = 10
 dt = 0.0020
 N = 100
 np = 4
-sdd_num = 2   ### ロードバランサーの種類
+sdd_num = 0   ### ロードバランサーの種類
 
 
 
@@ -53,7 +53,7 @@ Machine = sim.make_pair(Machine)
 for filename in os.listdir("."):
     if '.cdv' in filename:
         os.remove(filename)
-    elif 'calc_time_{}.dat'.format(sdd_num)==filename:
+    elif 'cost_{}.dat'.format(sdd_num)==filename:
         os.remove(filename)
 ### step 0 情報
 t = 0
@@ -73,16 +73,16 @@ print('{:10.5f} {:12.8f} {:12.8f} {:12.8f}'.format(t, k, v, k+v))
 for step in range(STEPS):
     t += dt
     calc_time = 0
+    comm_cost = 0
     
     ### 計算本体(シンプレクティック積分)
     ### 位置の更新t/2
-    Machine.communicate_particles()
     T = []
     for i,proc in enumerate(Machine.procs):
         Machine.procs[i] = sim.update_position(proc, dt/2)
         T.append(Machine.procs[i].time_result)
     calc_time += max(T)
-    Machine.communicate_particles()   ### 位置が動いたので通信
+    comm_cost += Machine.communicate_particles()   ### 位置が動いたので通信
 
     ### 速度の更新
     T = []
@@ -97,7 +97,7 @@ for step in range(STEPS):
         Machine.procs[i] = sim.calculate_force(proc, dt)
         T.append(Machine.procs[i].time_result)
     calc_time += max(T)
-    Machine.communicate_velocity() ### 速度を更新したので通信
+    comm_cost += Machine.communicate_velocity() ### 速度を更新したので通信
     
     ### 位置の更新t/2
     T = []
@@ -105,7 +105,7 @@ for step in range(STEPS):
         Machine.procs[i] = sim.update_position(proc, dt/2)
         T.append(Machine.procs[i].time_result)
     calc_time += max(T)
-    Machine.communicate_particles() ### 位置が動いたので通信
+    comm_cost += Machine.communicate_particles() ### 位置が動いたので通信
     
     """
     ### debug
@@ -137,9 +137,10 @@ for step in range(STEPS):
         # print('Pairlist Update/Running Load Balancer')
         Machine = sdd.sdd(Machine, sdd_num)   ### 選択した番号のロードバランサーを実行
         Machine = sim.make_pair(Machine)   ### ペアリスト更新
+        comm_cost += Machine.communicate_particles()
     
     ### このステップでの計算/通信コストを出力
-    envs.export_cost(calc_time, step+1, 'calc_time_{}.dat'.format(sdd_num))
+    envs.export_cost(calc_time, comm_cost, step+1, 'cost_{}.dat'.format(sdd_num))
 
 
 

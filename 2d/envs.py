@@ -112,7 +112,9 @@ class Machine:
         for i in range(len(self.procs)):
             self.procs[i].set_domain_pair_list(self.proc[i].Box, self.np)
 
+    ### 相互作用する可能性のある領域の粒子を全部持ってくる
     def communicate_particles(self):
+        comms = np.zeros((self.np, self.np))   ### どの領域からどこへが最も通信量が多かったか。
         for i,proc in enumerate(self.procs):
             assert proc.rank == i, 'ランクとプロセスリストのインデックスが一致しません'
             self.procs[i].particles_in_neighbor.clear()
@@ -120,8 +122,15 @@ class Machine:
                 assert j_pair[0] == i, '領域ペアリストが不適切です'
                 for p in self.procs[j_pair[1]].subregion.particles:
                     self.procs[i].particles_in_neighbor.append(p)
+        
+        ### 最大通信量だけ返す
+        ### 双方向同時通信が可能と仮定
+                comms[i,j_pair[1]] = self.procs[j_pair[1]].subregion.particles.__sizeof__()
+        return np.max(comms)
     
+    ### 他領域の粒子との間の力積計算結果を他領域に書き戻す
     def communicate_velocity(self):
+        comms = np.zeros((self.np, self.np))   ### どの領域からどこへが最も通信量が多かったか。
         ### 各領域に格納してある、
         for i, proci in enumerate(self.procs):
             ### 相互作用した粒子について、
@@ -144,11 +153,13 @@ class Machine:
                         pl.vy += pj.vy
                         # print('a {:8.6f} {:8.6f}'.format(pl.vx, pl.vy))
                         self.procs[k[1]].subregion.particles[l] = pl
+                        comms[i,k[1]] = pl.__sizeof__()
                         flag = True
                         break
                     if flag:
                         break
-        self.communicate_particles()
+        comm2 = self.communicate_particles()
+        return np.max(comms)+comm2
 
 
     ## 周期境界を考えた隣接セル検出
@@ -300,8 +311,8 @@ class Machine:
 # --------------------------------------------------------------------------------------------------------------------------
 
 ### 計算/通信の時間/量を記録する
-def export_cost(t, step, filename):
+def export_cost(t, c, step, filename):
     with open(filename, 'a') as f:
-        f.write('{} {}\n'.format(step, t))
+        f.write('{:0=7} {:12.10f} {}\n'.format(step, t, c))
 
 # ==========================================================================================================================
