@@ -148,7 +148,7 @@ class DomainPairList:
 def make_conf(Machine):
     Box = Machine.procs[0].Box
     N = Box.N
-    xl = Box.xl
+    xl = Box.xl   ### 液滴を作りたいときは、ここの値を減らす
     yl = Box.yl
     x_min = Box.x_min
     y_min = Box.y_min
@@ -308,7 +308,7 @@ def update_position(proc, dt):
 ### 並列化のため上書き形式
 def export_cdview(proc, step):
     rank = proc.rank
-    filename = 'conf{:0=4}.cdv'.format(step)
+    filename = 'conf{:0=6}.cdv'.format(step)
     with open(filename, 'a') as f:
         for i,p in enumerate(proc.subregion.particles):
             f.write('{} {} {} {} 0\n'.format(p.id, rank, p.x, p.y))

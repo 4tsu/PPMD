@@ -42,8 +42,7 @@ class SimulationBox:
         if not (self.y_min <= y <= self.y_max):
             while not (self.y_min <= y <= self.y_max):
                 y = self.modify(y, self.y_max, self.y_min, self.yl)
-        if not (self.x_min<x<self.x_max and self.y_min<y<self.y_max):
-            print(x,y)
+        assert self.x_min<=x<=self.x_max and self.y_min<=y<=self.y_max, '周期境界補正に失敗しています'
         return x, y
     
     ## 周期境界条件を考慮した距離を返す
