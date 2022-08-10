@@ -2,3 +2,5 @@
 *.cdv
 *.dat
 *.png
+*.dump
+*.lammps
