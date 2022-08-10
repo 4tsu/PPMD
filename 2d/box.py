@@ -3,6 +3,7 @@
 ## 系のエネルギーなどの観測コード
 # ====================================================
 import sim
+import particle
 
 import random
 
@@ -132,5 +133,82 @@ def potential_energy(proc):
         v += proc.Box.Potential.potential(r) - 4.0*(1/proc.Box.cutoff**12 - 1/proc.Box.cutoff**6) 
     
     return v
+
+
+
+### LAMMPSの.dump形式のファイルを読み込み
+def read_lammps(Machine, filename, xl, yl):
+    ### 系の情報を入力に合わせて変更
+    box = Machine.proc[0].Box
+    box.xl = xl
+    box.yl = yl
+    x_min = -xl/2
+    y_min = -yl/2
+    x_max =  xl/2
+    y_max =  yl/2
+    box.x_min = x_min
+    box.y_min = y_min
+    box.x_max = x_max
+    box.y_max = y_max
+    
+    ### 等間隔分割の仕方を取得
+    box = sdd.get_simple_array(box, len(Machine.procs))
+    xn = box.xn
+    yn = box.yn
+    sd_xl = box.sd_xl
+    sd_yl = box.sd_yl
+    Machine.set_boxes(box)
+
+    ### 粒子情報の読み込み
+    with open(filename) as f:
+            Line = [s.strip() for s in f.readlines()]
+            for l in range(0,len(Line)):
+            ids = ''
+            xs  = ''
+            ys  = ''
+            vxs = ''
+            vys = ''
+            index = 0
+            for s in Line[l]:
+                if s == ' ':
+                    index += 1
+                    continue
+                if index == 0:
+                    ids += s
+                elif index == 2:
+                    xs  += s
+                elif index == 3:
+                    ys  += s
+                elif index == 4:
+                    vxs += s
+                elif index == 5:
+                    vys += s
+            
+            ### 原点が端っこになる座標系
+            x = float(xs)*xl
+            y = float(ys)*yl
+            
+            ### 粒子をどの領域=プロセスに分配するか
+            ip = int((y//sd_yl)*xn + x//sd_xl)
+
+            ### 原点を中心にした座標系
+            x += x_min
+            y += y_min
+
+            p = particle.Particle(int(ids), x, y)
+            p.set_velocity(float(vxs), float(vys))
+
+            Machine.procs[ip].subregion.particles.append(Particle)
+            assert x_min <= x < x_max, '初期配置が適切ではありません'
+            assert y_min <= y < y_max, '初期配置が適切ではありません'
+    
+    for i,proc in enumerate(Machine.procs):
+        bottom = i//xn * sd_yl + y_min
+        left   = i%xn * sd_xl + x_min
+        top    = (i//xn + 1) * sd_yl + y_min
+        right  = (i%xn + 1) * sd_xl + x_min
+        Machine.procs[i].subregion.set_limit(top, right, bottom, left)
+    
+    return Machine
 
 # ==============================================================
