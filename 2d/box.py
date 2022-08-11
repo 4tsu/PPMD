@@ -4,6 +4,7 @@
 # ====================================================
 import sim
 import particle
+import sdd
 
 import random
 
@@ -137,19 +138,74 @@ def potential_energy(proc):
 
 
 ### LAMMPSの.dump形式のファイルを読み込み
-def read_lammps(Machine, filename, xl, yl):
+def read_lammps(Machine, filename):
+    ### box情報の読み込み
+    x_min = ''
+    x_max = ''
+    y_min = ''
+    y_max = ''
+    N = ''
+    with open(filename) as f:
+        Line = [s.strip() for s in f.readlines()]
+        for i,l in enumerate(Line):
+            print(i, l)
+            if i == 3:
+                index = 0
+                for s in l:
+                    if s == ' ':
+                        index += 1
+                        continue
+                    if index == 0:
+                        N += s
+                    else:
+                        break
+                continue
+
+            if i == 5:
+                index = 0
+                for s in l:
+                    if s == ' ':
+                        index += 1
+                        continue
+                    if index == 0:
+                        x_min += s
+                    elif index == 1:
+                        x_max += s
+                    else:
+                        break
+                continue
+
+            if i == 6:
+                index = 0
+                for s in l:
+                    if s == ' ':
+                        index += 1
+                        continue
+                    if index == 0:
+                        y_min += s
+                    elif index == 1:
+                        y_max += s
+                    else:
+                        break
+                break
+
+
     ### 系の情報を入力に合わせて変更
-    box = Machine.proc[0].Box
+    box = Machine.procs[0].Box
+    x_min = float(x_min)
+    y_min = float(y_min)
+    x_max = float(x_max)
+    y_max = float(y_max)
+    xl = x_max - x_min
+    yl = y_max - y_min
+
     box.xl = xl
     box.yl = yl
-    x_min = -xl/2
-    y_min = -yl/2
-    x_max =  xl/2
-    y_max =  yl/2
     box.x_min = x_min
     box.y_min = y_min
     box.x_max = x_max
     box.y_max = y_max
+    box.N = float(N)
     
     ### 等間隔分割の仕方を取得
     box = sdd.get_simple_array(box, len(Machine.procs))
@@ -161,8 +217,14 @@ def read_lammps(Machine, filename, xl, yl):
 
     ### 粒子情報の読み込み
     with open(filename) as f:
-            Line = [s.strip() for s in f.readlines()]
-            for l in range(0,len(Line)):
+        Line = [s.strip() for s in f.readlines()]
+        is_last = 0
+        for l in range(0,len(Line)):
+            if Line[l] == 'ITEM: ATOMS id x y vx vy':
+                is_last += 1
+                continue
+            if is_last != 2:
+                continue
             ids = ''
             xs  = ''
             ys  = ''
@@ -175,18 +237,18 @@ def read_lammps(Machine, filename, xl, yl):
                     continue
                 if index == 0:
                     ids += s
-                elif index == 2:
+                elif index == 1:
                     xs  += s
-                elif index == 3:
+                elif index == 2:
                     ys  += s
-                elif index == 4:
+                elif index == 3:
                     vxs += s
-                elif index == 5:
+                elif index == 4:
                     vys += s
             
             ### 原点が端っこになる座標系
-            x = float(xs)*xl
-            y = float(ys)*yl
+            x = float(xs) - x_min
+            y = float(ys) - y_min
             
             ### 粒子をどの領域=プロセスに分配するか
             ip = int((y//sd_yl)*xn + x//sd_xl)
@@ -198,9 +260,11 @@ def read_lammps(Machine, filename, xl, yl):
             p = particle.Particle(int(ids), x, y)
             p.set_velocity(float(vxs), float(vys))
 
-            Machine.procs[ip].subregion.particles.append(Particle)
+            Machine.procs[ip].subregion.particles.append(p)
             assert x_min <= x < x_max, '初期配置が適切ではありません'
             assert y_min <= y < y_max, '初期配置が適切ではありません'
+    
+    assert max(Machine.count())!=0, '粒子情報が正しく読み込まれていません'
     
     for i,proc in enumerate(Machine.procs):
         bottom = i//xn * sd_yl + y_min

@@ -36,7 +36,8 @@ Machine = envs.Machine(np)   ### 並列プロセス数
 Box = box.SimulationBox([20, 20], 2.0, N)
 Box.set_margin(0.5)
 Machine.set_boxes(Box)   ### シミュレーションボックスのグローバルな設定はグローバルに共有
-Machine = sim.make_conf(Machine)   ### 初期配置
+# Machine = sim.make_conf(Machine)   ### 初期配置
+Machine = box.read_lammps(Machine, 'droplet.dump')   ### 初期配置
 Machine = sdd.sdd_init(Machine, sdd_num)   ### 選択した番号のロードバランサーを実行
 Machine = sim.set_initial_velocity(1.0, Machine)   ### 初速
 ### 最初のペアリスト作成
