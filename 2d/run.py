@@ -13,6 +13,7 @@ import sys
 import os
 import random
 import time
+from numpy.lib.function_base import average
 
 random.seed(1)
 
@@ -37,7 +38,7 @@ Box = box.SimulationBox([20, 20], 2.0, N)
 Box.set_margin(0.5)
 Machine.set_boxes(Box)   ### シミュレーションボックスのグローバルな設定はグローバルに共有
 # Machine = sim.make_conf(Machine)   ### 初期配置
-Machine = box.read_lammps(Machine, 'droplet.dump')   ### 初期配置
+Machine = box.read_lammps(Machine, 'droplet.dump')   ### 液滴のデータを読み込み
 Machine = sdd.sdd_init(Machine, sdd_num)   ### 選択した番号のロードバランサーを実行
 Machine = sim.set_initial_velocity(1.0, Machine)   ### 初速
 ### 最初のペアリスト作成
@@ -70,6 +71,8 @@ print('{:10.5f} {:12.8f} {:12.8f} {:12.8f}'.format(t, k, v, k+v))
 
 
 
+calc_time_ave = []
+comm_cost_ave = []
 ## ループ
 for step in range(STEPS):
     t += dt
@@ -141,7 +144,12 @@ for step in range(STEPS):
         comm_cost += Machine.communicate_particles()
     
     ### このステップでの計算/通信コストを出力
-    envs.export_cost(calc_time, comm_cost, step+1, 'cost_{}.dat'.format(sdd_num))
+    calc_time_ave.append(calc_time)
+    comm_cost_ave.append(comm_cost)
+    if (step+1) % OB_INTERVAL == 0:
+        envs.export_cost(average(calc_time_ave), average(comm_cost_ave), step+1, 'cost_{}.dat'.format(sdd_num))
+        calc_time_ave = []
+        comm_cost_ave = []
 
 
 
