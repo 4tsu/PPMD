@@ -129,7 +129,6 @@ def rapid_decomp(atoms, rate, path, output, orgL):
 
 
 
-
 def save_file(filename, atoms, rho):
     # 密度と原子数から系の大きさを決定
     N = len(atoms)

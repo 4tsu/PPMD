@@ -87,6 +87,7 @@ class Potential:
         return v
 
 # -----------------------------------------------------------------------
+
 def periodic(proc):
     for i in range(len(proc.particles)):
         x, y = proc.Box.periodic_coordinate(proc.particles[i].x, proc.particles[i].y)
@@ -148,7 +149,6 @@ def read_lammps(Machine, filename):
     with open(filename) as f:
         Line = [s.strip() for s in f.readlines()]
         for i,l in enumerate(Line):
-            print(i, l)
             if i == 3:
                 index = 0
                 for s in l:
@@ -188,7 +188,6 @@ def read_lammps(Machine, filename):
                     else:
                         break
                 break
-
 
     ### 系の情報を入力に合わせて変更
     box = Machine.procs[0].Box
