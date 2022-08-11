@@ -98,7 +98,8 @@ class DomainPairList:
         ### 他の領域と相互作用する可能性があるようだったら…
         if len(self.list[rank]) != 0:
             ### 隣接する領域との間で粒子ペア探索
-            assert len(proc.particles_in_neighbor) != 0, "周辺粒子情報がプロセスに登録されていません"
+            ### 密度分布差が大きいときは領域粒子がゼロでも領域ペアリストにあってよい
+            # assert len(proc.particles_in_neighbor) != 0, "周辺粒子情報がプロセスに登録されていません"
             proc = self.search_other_region(proc)
         ### なければクリア
         else:
@@ -282,7 +283,6 @@ def calculate_force(proc, dt):
     assert len(sending_velocities)+cutoffed_other == len(proc.pairlist_between_neighbor), '速度の書き戻し回数が不正です'
     proc.subregion.particles = my_particles
     proc.set_sending_velocity(sending_velocities)
-    
 
     proc.stop_watch()
     return proc
@@ -338,6 +338,8 @@ def check_vmax(proc):
             vmax2 = v2
     vmax = sqrt(vmax2)
     return vmax
+
+
 
 def check_pairlist(Machine, vmax, dt):
     box = Machine.procs[0].Box

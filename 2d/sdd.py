@@ -111,6 +111,8 @@ def sdd_init(Machine, sdd_num):
     elif sdd_num==1:
         return xybin(Machine)
     elif sdd_num==2:
+        Machine = simple(Machine)   ### 最初は等間隔分割
+        Machine = voronoi_init(Machine)   ### 等間隔分割で不具合が出たらカバー
         return voronoimc(Machine)
 
 
@@ -349,8 +351,6 @@ def voronoimc(Machine,
     ## 各粒子は、最も近い中心点の領域の所属となる。これをそのまま実装している。
     ## preparation
     method_type_name = 'voronoimc'
-    Machine = simple(Machine)   ### 最初は等間隔分割
-    Machine = voronoi_init(Machine)   ### 等間隔分割で不具合が出たらカバー
 
     ## 1.assigned to the cluster with the closest center
     ## 2.bias is initially set to zero 
