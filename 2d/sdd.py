@@ -102,7 +102,6 @@ class subregion:
     def set_bias(self, bias):
         self.bias = bias
 
-
 # ------------------------------------------------------------------------------------------
 
 def sdd_init(Machine, sdd_num):
@@ -347,7 +346,7 @@ def voronoi_allocate(Machine, bias):
 ### iteration：アルゴリズムの最大繰り返し回数、alpha：biasの変化係数
 ### early_stop_range：繰り返し時のearly stopを、理想値のどれくらいで発動させるか
 def voronoimc(Machine,
-              iteration=50, alpha=0.0005, early_stop_range=0.01):
+              iteration=80, alpha=0.008, early_stop_range=0.01):
     ## 各粒子は、最も近い中心点の領域の所属となる。これをそのまま実装している。
     ## preparation
     method_type_name = 'voronoimc'
@@ -357,14 +356,14 @@ def voronoimc(Machine,
     ### ↑シミュレーション途中のときはバイアスは前回の値を引き継ぐ
     bias = np.zeros(Machine.np)
     for i,proc in enumerate(Machine.procs):
-        proc.subregion.calc_center(proc.Box)
-        proc.subregion.calc_radius(proc.Box)
+        Machine.procs[i].subregion.calc_center(proc.Box)
+        Machine.procs[i].subregion.calc_radius(proc.Box)
         bias[i] = proc.subregion.bias
     Machine = voronoi_allocate(Machine, bias)
-    # plot_fig(Machine)   ### 分割初期状態の図
+    plot_fig(Machine, 0, method_type_name)  ### 分割初期状態の図
     
     for proc in Machine.procs:
-        proc.subregion.calc_center(proc.Box)
+        Machine.procs[i].subregion.calc_center(proc.Box)
     counts = Machine.count()   ### estimates work-load by using # of particles
     # print('step', 0, 'count', Machine.count())
     
@@ -375,23 +374,36 @@ def voronoimc(Machine,
         dpl = sim.DomainPairList(Machine)
         counts = Machine.count()
         n = np.array(counts)
+        # print('---')
+        # print(n)
         for proc_list in dpl.list:
+            # print(len(proc_list))
             for domain_pair in proc_list:
                 i = domain_pair[0]
                 j = domain_pair[1]
                 ## 3.modifying "bi"
-                bias[i] -= alpha*0.01*(n[i] - n[j])
-                bias[j] += alpha*0.01*(n[i] - n[j])
-        
+                bias[i] -= alpha*(n[i] - n[j])
+                bias[j] += alpha*(n[i] - n[j])
+        ### バイアスが極端な値にならないように。
+        for i,proc in enumerate(Machine.procs):
+            if proc.subregion.bias < -proc.subregion.radius:
+                Machine.procs[i].subregion.bias = -proc.subregion.radius
+
         ## 4.Atoms move to another cluster or stay
         Machine = voronoi_allocate(Machine, bias)
         for proc in Machine.procs:
-            proc.subregion.calc_center(proc.Box)
+            Machine.procs[i].subregion.calc_center(proc.Box)
+            Machine.procs[i].subregion.calc_radius(proc.Box)
        
-        # print('step', s+1, 'bias', bias, 'count', S.count())
+        # print('step', s+1, 'bias', bias)
+        with open('bias.dat', 'a') as f:
+            f.write('{}'.format(s+1))
+            for b in bias:
+                f.write(' {}'.format(b))
+            f.write('\n')
         # print('step', s+1, 'count', Machine.count())
         # if (s+1)%1 == 0:
-        #     plot_fig(Machine, method_type_name)
+        #     plot_fig(Machine, s+1, method_type_name)
         if max(Machine.count()) <= ideal_count_max:
             # print('***Early Stop***')
             break
@@ -401,6 +413,8 @@ def voronoimc(Machine,
         Machine.procs[i].subregion.set_bias(bias[i])
 
     return Machine
+
+
 
 def voronoi2(data, S, cutoff, iteration=50, alpha=0.05):
     ## method from "R. Koradi et al. Comput. Phys. Commun. 124(2000) 139"
@@ -465,17 +479,22 @@ def voronoi2(data, S, cutoff, iteration=50, alpha=0.05):
 
 
 
-def plot_fig(S, s, method_type_name):
+def plot_fig(Machine, s, method_type_name):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     colorlist =  ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
-    for c,p in enumerate(S.Processors):
+    for c,proc in enumerate(Machine.procs):
         clr = colorlist[c%10]
-        D = np.array(p.members)
+        P = []
+        for p in proc.subregion.particles:
+            P.append([p.x, p.y])
+        D = np.array(P)
         if not len(D) == 0:
             plt.scatter(D[:,0], D[:,1], c=clr)
-    plt.xlim(0,1)
-    plt.ylim(0,1)
+
+    box = Machine.procs[0].Box
+    plt.xlim(box.x_min, box.x_max)
+    plt.ylim(box.y_min, box.y_max)
     plt.xticks([])
     plt.yticks([])
     ax.set_aspect('equal')
