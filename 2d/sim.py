@@ -47,6 +47,8 @@ class DomainPairList:
     def judge(self, i, j, box):
         if i == j:
             return True
+        if not (self.centers[i] and self.centers[j]):
+            return True
         diff = box.periodic_distance(self.centers[i][0], self.centers[i][1], self.centers[j][0], self.centers[j][1])
         if (diff - self.radii[i] - self.radii[j]) > box.co_p_margin:
             return True

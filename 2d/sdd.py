@@ -267,31 +267,25 @@ def voronoi_init(Machine):
             
             if counts_np[i] == 0:
                 target_j = np.argmax(counts_np)
-                target_right  = Machine.procs[target_j].subregion.boundaries[1][2]*-1
-                target_left   = Machine.procs[target_j].subregion.boundaries[3][2]*-1
-                target_top    = Machine.procs[target_j].subregion.boundaries[0][2]*-1
-                target_bottom = Machine.procs[target_j].subregion.boundaries[2][2]*-1
+                target_right  = Machine.procs[target_j].subregion.right
+                target_left   = Machine.procs[target_j].subregion.left
+                target_top    = Machine.procs[target_j].subregion.top
+                target_bottom = Machine.procs[target_j].subregion.bottom
                 target_width = target_right - target_left
             
-                center_line = (target_right - target_width*0.5)*-1
+                center_line = target_right - target_width*0.5
                 ### 領域の左側は、空だったプロセスに 
-                Machine.procs[i].subregion.boundaries[3][2] = target_left*-1
-                Machine.procs[i].subregion.boundaries[1][2] = center_line
-                Machine.procs[i].subregion.boundaries[0][2] = target_top*-1
-                Machine.procs[i].subregion.boundaries[2][2] = target_bottom*-1
-                Machine.procs[i].subregion.center[0] = target_left + target_width*0.25
-                Machine.procs[i].subregion.center[1] = (target_bottom + target_top)*0.5
+                Machine.procs[i].subregion.set_limit(target_top, center_line, target_bottom, target_left)
                 ### 領域の右側は、もともといたプロセスに
-                Machine.procs[target_j].subregion.boundaries[3][2] = center_line
-                Machine.procs[target_j].subregion.center[0] = target_right - target_width*0.25
+                Machine.procs[target_j].subregion.left = center_line
 
                 ### 実際の粒子割当
                 target_j_particles = []
                 i_particles = []
                 for p in Machine.procs[target_j].subregion.particles:
-                    if p.x > centerline:
+                    if p.x > center_line:
                         target_j_particles.append(p)
-                    elif p.x <= centerline:
+                    elif p.x <= center_line:
                         i_particles.append(p)
                 
                 Machine.procs[i].subregion.particles        = i_particles
