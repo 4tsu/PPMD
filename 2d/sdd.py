@@ -354,7 +354,7 @@ def voronoimc(Machine,
         Machine.procs[i].subregion.calc_radius(proc.Box)
         bias[i] = proc.subregion.bias
     Machine = voronoi_allocate(Machine, bias)
-    plot_fig(Machine, 0, method_type_name)  ### 分割初期状態の図
+    # plot_fig(Machine, 0, method_type_name)  ### 分割初期状態の図
     
     for proc in Machine.procs:
         Machine.procs[i].subregion.calc_center(proc.Box)
