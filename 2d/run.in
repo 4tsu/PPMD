@@ -14,7 +14,7 @@ pair_coeff 1 1 1.0 1.0 3.5
 thermo_style custom step etotal temp vol
 thermo 500
 
-fix 1 all nvt temp 0.36 0.36 $(100.0*dt)
+fix 1 all nvt temp 0.20 0.20 $(100.0*dt)
 
 # dump id all atom 500 result.dump
 dump id all custom 500000 droplet.dump id x y vx vy
@@ -24,4 +24,4 @@ variable temperature equal temp
 variable volume equal vol
 fix fout1 all ave/time 1 100 100 v_energy v_temperature v_volume file out.dat
 
-run 500000
+run 800000
