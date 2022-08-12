@@ -25,8 +25,8 @@ STEPS = 1000
 OB_INTERVAL = 10
 dt = 0.0020
 N = 100
-np = 4
-sdd_num = 0   ### ロードバランサーの種類
+np = 9
+sdd_num = 2   ### ロードバランサーの種類
 
 
 
@@ -56,6 +56,8 @@ for filename in os.listdir("."):
     if '.cdv' in filename:
         os.remove(filename)
     elif 'cost_{}.dat'.format(sdd_num)==filename:
+        os.remove(filename)
+    elif 'load_balance_{}.dat'.format(sdd_num)==filename:
         os.remove(filename)
 ### step 0 情報
 t = 0
@@ -143,7 +145,8 @@ for step in range(STEPS):
         Machine = sim.make_pair(Machine)   ### ペアリスト更新
         comm_cost += Machine.communicate_particles()
     
-    ### このステップでの計算/通信コストを出力
+    ### このステップでのロードバランスや計算/通信コストを出力
+    envs.export_cost(min(Machine.count()), max(Machine.count()), step+1, 'load_balance_{}.dat'.format(sdd_num))
     calc_time_ave.append(calc_time)
     comm_cost_ave.append(comm_cost)
     if (step+1) % OB_INTERVAL == 0:
