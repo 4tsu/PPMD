@@ -390,11 +390,11 @@ def voronoimc(Machine,
             Machine.procs[i].subregion.calc_radius(proc.Box)
        
         # print('step', s+1, 'bias', bias)
-        with open('bias.dat', 'a') as f:
-            f.write('{}'.format(s+1))
-            for b in bias:
-                f.write(' {}'.format(b))
-            f.write('\n')
+        # with open('bias.dat', 'a') as f:
+        #     f.write('{}'.format(s+1))
+        #     for b in bias:
+        #         f.write(' {}'.format(b))
+        #     f.write('\n')
         # print('step', s+1, 'count', Machine.count())
         # if (s+1)%1 == 0:
         #     plot_fig(Machine, s+1, method_type_name)
