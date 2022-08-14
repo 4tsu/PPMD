@@ -63,6 +63,7 @@ for filename in os.listdir("."):
 t = 0
 k = 0
 v = 0
+sim.export_cdview(Machine.procs[0], 0, head=True)
 for proc in Machine.procs:
     sim.export_cdview(proc, 0)
     k += box.kinetic_energy(proc)
@@ -127,6 +128,7 @@ for step in range(STEPS):
     k = 0
     v = 0
     if (step+1) % OB_INTERVAL == 0:
+        sim.export_cdview(Machine.procs[0], step+1, head=True)
         for i,proc in enumerate(Machine.procs):
             sim.export_cdview(proc, step+1)   ### 情報の出力
     for i,proc in enumerate(Machine.procs):

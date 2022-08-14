@@ -308,12 +308,21 @@ def update_position(proc, dt):
 
 ## 可視化ソフトcdview用のダンプ出力
 ### 並列化のため上書き形式
-def export_cdview(proc, step):
-    rank = proc.rank
+def export_cdview(proc, step, head=False):
     filename = 'conf{:0=6}.cdv'.format(step)
-    with open(filename, 'a') as f:
-        for i,p in enumerate(proc.subregion.particles):
-            f.write('{} {} {} {} 0\n'.format(p.id, rank, p.x, p.y))
+    if head:
+        with open(filename, 'a') as f:
+            f.write('#box_sx={}\n'.format(proc.Box.x_min))
+            f.write('#box_sy={}\n'.format(proc.Box.y_min))
+            f.write('#box_ex={}\n'.format(proc.Box.x_max))
+            f.write('#box_ey={}\n'.format(proc.Box.y_max))
+            f.write('#box_sz={}\n'.format(0))
+            f.write('#box_ez={}\n'.format(0))
+    else:
+        rank = proc.rank
+        with open(filename, 'a') as f:
+            for i,p in enumerate(proc.subregion.particles):
+                f.write('{} {} {} {} 0\n'.format(p.id, rank, p.x, p.y))
 
 
 
