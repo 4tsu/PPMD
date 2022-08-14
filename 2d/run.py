@@ -19,14 +19,14 @@ random.seed(1)
 
 # ------------------------------------------------------
 
-
 ## シミュレーションパラメータの設定
 STEPS = 1000
 OB_INTERVAL = 10
 dt = 0.0020
 N = 100
 np = 9
-sdd_num = 2   ### ロードバランサーの種類
+sdd_num = 0   ### ロードバランサーの種類
+config_data = 'bubble.dump'
 
 
 
@@ -38,7 +38,7 @@ Box = box.SimulationBox([20, 20], 2.0, N)
 Box.set_margin(0.5)
 Machine.set_boxes(Box)   ### シミュレーションボックスのグローバルな設定はグローバルに共有
 # Machine = sim.make_conf(Machine)   ### 初期配置
-Machine = box.read_lammps(Machine, 'droplet.dump')   ### 液滴のデータを読み込み
+Machine = box.read_lammps(Machine, config_data)   ### 液滴のデータを読み込み
 Machine = sdd.sdd_init(Machine, sdd_num)   ### 選択した番号のロードバランサーを実行
 Machine = sim.set_initial_velocity(1.0, Machine)   ### 初速
 ### 最初のペアリスト作成
@@ -126,9 +126,10 @@ for step in range(STEPS):
     v_maxs = []   ### ペアリストチェック用
     k = 0
     v = 0
-    for i,proc in enumerate(Machine.procs):
-        if (step+1) % OB_INTERVAL == 0:
+    if (step+1) % OB_INTERVAL == 0:
+        for i,proc in enumerate(Machine.procs):
             sim.export_cdview(proc, step+1)   ### 情報の出力
+    for i,proc in enumerate(Machine.procs):
         k += box.kinetic_energy(proc)
         v += box.potential_energy(proc)
         v_maxs.append(sim.check_vmax(proc))

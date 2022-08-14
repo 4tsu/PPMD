@@ -24,9 +24,11 @@ def add_droplet(atoms):
                 continue
             atoms.append(Atom(x, y, z))   # 斜め方向に原子を配置
 
+
+
 # 泡の形を作る
 def add_bubble(atoms, rho):
-    r =  0.16   # シミュレーションボックスの一辺長を0.9としたときの球の半径
+    r =  0.18   # シミュレーションボックスの一辺長を0.9としたときの球の半径
     M = 16             # 格子の数を最初に指定
     s = (0.9/M)**1.0   # 格子間距離のルート2倍
     h = 0.5 * s
@@ -35,29 +37,24 @@ def add_bubble(atoms, rho):
     while(ix < 0.45):   
         iy = -0.45
         while(iy < 0.45):
-            iz = -0.45
-            while(iz < 0.45):
-                x = ix
-                y = iy
-                z = iz
-                if (x**2 + y**2 + z**2 < r**2):   # 原子を球の外側のみに配置するため
-                    iz += 1/M
-                    continue
-                atoms.append(Atom(x, y, z))   # まっすぐに原子を配置
-                atoms.append(Atom(x, y, z+h))
-                atoms.append(Atom(x, y+h, z))
-                atoms.append(Atom(x+h, y, z))
-                atoms.append(Atom(x+h, y+h, z+h))
-                iz += 0.9/M
+            x = ix
+            y = iy
+            z = 0
+            if (x**2 + y**2 + z**2 < r**2):   # 原子を球の外側のみに配置するため
+                iy += 0.9/M
+                continue
+            atoms.append(Atom(x, y, z))   # まっすぐに原子を配置
             iy += 0.9/M
         ix += 0.9/M
 
     N = len(atoms)
-    L = (N/rho)**(1/3)
+    L = (N/rho)**(1/2)
     for i, a in enumerate(atoms):
         a.x *= L
         a.y *= L
         a.z *= L
+
+
 
 # 一様な液体の原子配置を読み込んで，急減圧して返す
 def rapid_decomp(atoms, rate, path, output, orgL):
@@ -153,14 +150,14 @@ def save_file(filename, atoms, rho):
     print("Generated {}".format(filename))
 
 atoms = []
+# rho = 0.05
+# add_droplet(atoms)
+# save_file("droplet.atoms", atoms, rho)
 
-rho = 0.05
-add_droplet(atoms)
-save_file("droplet.atoms", atoms, rho)
-
-# rho = 0.8
-# add_bubble(atoms, rho)
-# save_file("bubble.atoms", atoms, rho)
+atoms = []
+rho = 0.7
+add_bubble(atoms, rho)
+save_file("bubble.atoms", atoms, rho)
 
 # rate = (0.65/0.575)**(1/3)   # 密度の変化を長さの次元に．
 # orgL = 29.320330466373726
