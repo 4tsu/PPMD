@@ -2,9 +2,9 @@
 ## 対象とする系、シミュレーションボックスについてのコード
 ## 系のエネルギーなどの観測コード
 # ====================================================
-import sim
-import particle
-import sdd
+from two import sim
+from two import particle
+from two import sdd
 
 import random
 

@@ -1,8 +1,8 @@
 # =================================================
 ## シミュレーション実行環境のシミュレート用コード
 # =================================================
-import sdd
-import sim
+from two import sdd
+from two import sim
 
 from os import stat_result
 import random

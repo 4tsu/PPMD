@@ -2,8 +2,8 @@
 ## 並列シミュレーション時の空間分割手法コード
 ## ロードバランサー
 # ===============================================================================================================================
-import particle
-import sim
+from two import particle
+from two import sim
 
 from itertools import count
 from locale import ABDAY_1

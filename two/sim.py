@@ -1,9 +1,9 @@
 # ===================================================
 ## シミュレーション本体の各過程をメソッドにまとめておく
 # ===================================================
-import particle
-import box
-import sdd
+from two import particle
+from two import box
+from two import sdd
 
 from math import pi, sin, cos, ceil, sqrt
 import random

@@ -3,11 +3,11 @@
 ### 仮想的な並列計算環境をシミュレートし、その上でMDを走らせる
 ### 他のモジュールで定義したメソッドを呼び出すだけで、本体は書かない
 # ======================================================
-import envs
-import particle
-import box
-import sdd
-import sim
+from two import envs
+from two import particle
+from two import box
+from two import sdd
+from two import sim
 
 import sys
 import os
