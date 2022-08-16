@@ -233,8 +233,6 @@ def periodic_od(L,dx):
 ## 力の計算
 def calculate_force(proc, dt):
     proc.start_watch()
-    cutoffed_my = 0
-    cutoffed_other = 0
     Box = proc.Box
 
     ### 自領域内での力積計算
@@ -245,7 +243,6 @@ def calculate_force(proc, dt):
         assert ip.id==pair.idi and jp.id==pair.idj, 'ペアリストIDと選択された粒子IDが一致しません'
         r = Box.periodic_distance(ip.x, ip.y, jp.x, jp.y)
         if r > Box.cutoff:
-            cutoffed_my += 1
             continue
         df = (24.0 * r**6 - 48.0) / r**14 * dt
 
@@ -267,7 +264,6 @@ def calculate_force(proc, dt):
         assert ip.id==pair.idi and jp.id==pair.idj, 'ペアリストIDと選択された粒子IDが一致しません'
         r = Box.periodic_distance(ip.x, ip.y, jp.x, jp.y)
         if r > Box.cutoff:
-            cutoffed_other += 1
             continue
         df = (24.0 * r**6 - 48.0) / r**14 * dt
 
@@ -282,7 +278,6 @@ def calculate_force(proc, dt):
         my_particles[pair.i] = ip
         sending_velocities.append(kp)
 
-    assert len(sending_velocities)+cutoffed_other == len(proc.pairlist_between_neighbor), '速度の書き戻し回数が不正です'
     proc.subregion.particles = my_particles
     proc.set_sending_velocity(sending_velocities)
 
