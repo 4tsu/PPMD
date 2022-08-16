@@ -340,7 +340,7 @@ def voronoi_allocate(Machine, bias):
 ### iteration：アルゴリズムの最大繰り返し回数、alpha：biasの変化係数
 ### early_stop_range：繰り返し時のearly stopを、理想値のどれくらいで発動させるか
 def voronoimc(Machine,
-              iteration=80, alpha=0.008, early_stop_range=0.01):
+              iteration=800, alpha=0.012, early_stop_range=0.01):
     ## 各粒子は、最も近い中心点の領域の所属となる。これをそのまま実装している。
     ## preparation
     method_type_name = 'voronoimc'
@@ -382,6 +382,8 @@ def voronoimc(Machine,
         for i,proc in enumerate(Machine.procs):
             if proc.subregion.bias < -proc.subregion.radius:
                 Machine.procs[i].subregion.bias = -proc.subregion.radius
+            elif proc.subregion.bias > min(proc.Box.xl, proc.Box.yl):
+                Machine.procs[i].subregion.bias = min(proc.Box.xl, proc.Box.yl)
 
         ## 4.Atoms move to another cluster or stay
         Machine = voronoi_allocate(Machine, bias)
@@ -390,7 +392,7 @@ def voronoimc(Machine,
             Machine.procs[i].subregion.calc_radius(proc.Box)
        
         # print('step', s+1, 'bias', bias)
-        # with open('bias.dat', 'a') as f:
+        # with open('bias0012.dat', 'a') as f:
         #     f.write('{}'.format(s+1))
         #     for b in bias:
         #         f.write(' {}'.format(b))
