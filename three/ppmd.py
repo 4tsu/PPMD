@@ -3,11 +3,11 @@
 ### 仮想的な並列計算環境をシミュレートし、その上でMDを走らせる
 ### 他のモジュールで定義したメソッドを呼び出すだけで、本体は書かない
 # ======================================================
-from two import envs
-from two import particle
-from two import box
-from two import sdd
-from two import sim
+from three import envs
+from three import particle
+from three import box
+from three import sdd
+from three import sim
 
 import sys
 import os
@@ -28,10 +28,11 @@ class PPMD():
 
 
     ## シミュレーションボックスの設定
-    def set_box(self, N, xl, yl, cutoff):
+    def set_box(self, N, xl, yl, zl, cutoff):
         self.N = N
         self.xl = xl
         self.yl = yl
+        self.zl = zl
         self.cutoff = cutoff
 
 
@@ -68,7 +69,7 @@ class PPMD():
         Machine = envs.Machine(self.np)   ### 並列プロセス数
 
         ## シミュレーションする系の準備
-        Box = box.SimulationBox([self.xl, self.yl], self.cutoff, self.N)
+        Box = box.SimulationBox([self.xl, self.yl, self.zl], self.cutoff, self.N)
         Box.set_margin(self.margin)
         Machine.set_boxes(Box)   ### シミュレーションボックスのグローバルな設定はグローバルに共有
         if self.config_data == None:
@@ -172,6 +173,7 @@ class PPMD():
             if update:
                 # print('Pairlist Update/Running Load Balancer')
                 Machine = sdd.sdd(Machine, self.sdd_type)   ### 選択した番号のロードバランサーを実行
+                Machine.check_particles
                 Machine = sim.make_pair(Machine)   ### ペアリスト更新
                 comm_cost += Machine.communicate_particles()
             
@@ -200,5 +202,5 @@ def debug_pairlist(proc):
 def debug_particles(Machine):
     for i,proc in enumerate(Machine.procs):
         for p in Machine.procs[i].subregion.particles:
-            print('x,y=[{:8.6f} {:8.6f}]'.format(p.x, p.y))
-            print('vx,vy=[{:8.6f} {:8.6f}]'.format(p.vx, p.vy))
+            print('x,y,z=[{:8.6f} {:8.6f} {:8.6f}]'.format(p.x, p.y, p.z))
+            print('vx,vy,vz=[{:8.6f} {:8.6f} {:8.6f}]'.format(p.vx, p.vy, p.vz))

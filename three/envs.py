@@ -1,8 +1,8 @@
 # =================================================
 ## シミュレーション実行環境のシミュレート用コード
 # =================================================
-from two import sdd
-from two import sim
+from three import sdd
+from three import sim
 
 from os import stat_result
 import random
@@ -151,6 +151,7 @@ class Machine:
                         # print('j {:8.6f} {:8.6f}'.format(pj.vx, pj.vy))
                         pl.vx += pj.vx
                         pl.vy += pj.vy
+                        pl.vz += pj.vz
                         # print('a {:8.6f} {:8.6f}'.format(pl.vx, pl.vy))
                         self.procs[k[1]].subregion.particles[l] = pl
                         comms[i,k[1]] = pl.__sizeof__()
@@ -160,6 +161,16 @@ class Machine:
                         break
         comm2 = self.communicate_particles()
         return np.max(comms)+comm2
+
+
+
+    ## 粒子が行方不明になってないかチェックする
+    def check_particles(self):
+        particle_count = 0
+        for i,p in enumerate(self.procs):
+            particle_count += len(p.subregion.particles)
+        assert particle_count == self.procs[0].Box.N, '粒子が失われています'
+
 
 
     ## 周期境界を考えた隣接セル検出

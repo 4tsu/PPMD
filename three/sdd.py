@@ -2,8 +2,8 @@
 ## 並列シミュレーション時の空間分割手法コード
 ## ロードバランサー
 # ===============================================================================================================================
-from two import particle
-from two import sim
+from three import particle
+from three import sim
 
 from itertools import count
 from locale import ABDAY_1
@@ -28,6 +28,7 @@ class subregion:
     def calc_center(self, box):
         xl = box.xl
         yl = box.yl
+        zl = box.zl
         P = self.particles
         
         if not len(P) == 0:
@@ -35,8 +36,10 @@ class subregion:
             ### シミュレーションボックスの境界をまたいでも正しく計算できるよう
             origin_px = P[0].x
             origin_py = P[0].y
+            origin_pz = P[0].z
             sx = 0
             sy = 0
+            sz = 0
             for i,p in enumerate(P):
                 rx_list = np.array([abs(p.x-origin_px), abs(p.x-origin_px-xl), abs(p.x-origin_px+xl)])
                 if np.argmin(rx_list)==0:
@@ -54,23 +57,35 @@ class subregion:
                 else:
                     ry = p.y - origin_py + yl
 
+                rz_list = np.array([abs(p.z-origin_pz), abs(p.z-origin_pz-zl), abs(p.z-origin_pz+zl)])
+                if np.argmin(rz_list)==0:
+                    rz = p.z - origin_pz
+                elif np.argmin(rz_list)==1:
+                    rz = p.z - origin_pz - zl
+                else:
+                    rz = p.z - origin_pz + zl
+
                 sx += rx
                 sy += ry
+                sz += rz
 
             sx /= len(P)
             sy /= len(P)
+            sz /= len(P)
             sx += origin_px
             sy += origin_py
-            sx, sy = box.periodic_coordinate(sx, sy)
-            assert box.x_max>sx>box.x_min and box.y_max>sy>box.y_min, 'center value is out of range!'
+            sz += origin_py
+            sx, sy, sz = box.periodic_coordinate(sx, sy, sz)
+            assert box.x_max>=sx>=box.x_min and box.y_max>=sy>=box.y_min and box.z_max>=sz>=box.z_min, 'center value is out of range!'
             self.center.clear()
             self.center.append(sx)
             self.center.append(sy)
+            self.center.append(sz)
     
     def calc_radius(self, box):
         r_max = 0
         for p in self.particles:
-            r = box.periodic_distance(p.x, p.y, self.center[0], self.center[1])
+            r = box.periodic_distance(p.x, p.y, p.z, self.center[0], self.center[1], self.center[2])
             if r > r_max:
                 r_max = r
         self.radius = r_max
@@ -93,11 +108,13 @@ class subregion:
             prmtr += ((C[j][0]-C[j-1][0])**2 + (C[j][1]-C[j-1][1])**2)**0.5
         self.perimeter = prmtr
 
-    def set_limit(self, top, right, bottom, left):
+    def set_limit(self, top, bottom, right, left, front, back):
         self.top    = top
-        self.right  = right
         self.bottom = bottom
+        self.right  = right
         self.left   = left
+        self.back   = back
+        self.front  = front
 
     def set_bias(self, bias):
         self.bias = bias
@@ -130,23 +147,26 @@ def get_simple_array(Box, np):
     ## 空間分割の形状=領域の並び方を決める
     xl = Box.xl
     yl = Box.yl
-    ### 何x何の配列が良いか決める。領域は正方形に近い方が良い
-    xn_list = []
+    zl = Box.zl
+    ### 何x何x何の配列が良いか決める。領域は立方体に近い方が良い
+    xyzn_list = []
     for xn in range(1, np+1):
         if np%xn == 0:
-            xn_list.append(xn)
-    xy_diff = xl + yl
-    xn_best = 0
-    for xn in xn_list:
-        yn = np / xn
-        sd_xl = xl/xn
-        sd_yl = yl/yn
-        if abs(sd_xl-sd_yl) < xy_diff:
-            xy_diff = abs(sd_xl - sd_yl)
-            xn_best = xn
-    xn = xn_best
-    yn = int(np/xn)
-    Box.set_subregion(xn, yn, xl/xn, yl/yn)
+            yzn = np/xn
+            for yn in range(1, int(yzn)+1):
+                if yzn%yn == 0:
+                    zn = yzn/yn
+                    xyzn_list.append([xn, yn, zn])
+    n_best = np
+    i_best = -1
+    for i,xyzn in enumerate(xyzn_list):
+        if abs(max(xyzn)-min(xyzn)) < n_best:
+            n_best = abs(max(xyzn)-min(xyzn))
+            i_best = i
+    xn = xyzn_list[i_best][0]
+    yn = xyzn_list[i_best][1]
+    zn = xyzn_list[i_best][2]
+    Box.set_subregion(xn, yn, zn, xl/xn, yl/yn, zl/zn)
     return Box
 
 
@@ -157,19 +177,29 @@ def simple(Machine):
         bottom = proc.subregion.bottom
         right  = proc.subregion.right
         left   = proc.subregion.left
+        back   = proc.subregion.back
+        front  = proc.subregion.front
         box = proc.Box
+        x_min = box.x_min
+        y_min = box.y_min
+        z_min = box.z_min
+        sd_xl = box.sd_xl
+        sd_yl = box.sd_yl
+        sd_zl = box.sd_zl
+        xn = box.xn
+        yn = box.yn
+        zn = box.zn
 
         particles = proc.subregion.particles
         new_particles = []
         for j in range(len(particles)):
             jp = particles.pop()
-            if jp.x>right or jp.x<left or jp.y>top or jp.y<bottom:
-                iproc = int(((jp.y-box.y_min)//box.sd_yl)*box.xn + (jp.x-box.x_min)//box.sd_xl)
+            if jp.x>right or jp.x<left or jp.y>back or jp.y<front or jp.z>top or jp.z<bottom:
+                iproc = int(((jp.z-z_min)//sd_zl)*(xn*yn) + ((jp.y-y_min)//sd_yl)*xn + (jp.x-x_min)//sd_xl)
                 Machine.procs[iproc].subregion.particles.append(jp)
             else:
                 new_particles.append(jp)
         Machine.procs[i].subregion.particles = new_particles
-
     return Machine
 
 

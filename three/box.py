@@ -2,9 +2,9 @@
 ## 対象とする系、シミュレーションボックスについてのコード
 ## 系のエネルギーなどの観測コード
 # ====================================================
-from two import sim
-from two import particle
-from two import sdd
+from three import sim
+from three import particle
+from three import sdd
 
 import random
 
@@ -17,10 +17,13 @@ class SimulationBox:
     def __init__(self, lengths, cutoff, N):
         self.xl = lengths[0]
         self.yl = lengths[1]
+        self.zl = lengths[2]
         self.x_max =  self.xl/2
         self.x_min = -self.xl/2
         self.y_max =  self.yl/2
         self.y_min = -self.yl/2
+        self.z_max =  self.zl/2
+        self.z_min = -self.zl/2
         
         self.cutoff = cutoff
         self.N = N
@@ -36,23 +39,30 @@ class SimulationBox:
         return x
 
     ## 周期境界条件の適用
-    def periodic_coordinate(self, x, y):
+    def periodic_coordinate(self, x, y, z):
         if not (self.x_min <= x <= self.x_max):
             while not (self.x_min <= x <= self.x_max):
                 x = self.modify(x, self.x_max, self.x_min, self.xl)
                 # print(x)
+        
         if not (self.y_min <= y <= self.y_max):
             while not (self.y_min <= y <= self.y_max):
                 y = self.modify(y, self.y_max, self.y_min, self.yl)
-        assert self.x_min<=x<=self.x_max and self.y_min<=y<=self.y_max, '周期境界補正に失敗しています'
-        return x, y
+        
+        if not (self.z_min <= z <= self.z_max):
+            while not (self.z_min <= z <= self.z_max):
+                z = self.modify(z, self.z_max, self.z_min, self.zl)
+        
+        assert self.x_min<=x<=self.x_max and self.y_min<=y<=self.y_max and self.z_min<=z<=self.z_max, '周期境界補正に失敗しています'
+        return x, y, z
     
     ## 周期境界条件を考慮した距離を返す
-    def periodic_distance(self, x1, y1, x2, y2):
+    def periodic_distance(self, x1, y1, z1, x2, y2, z2):
         rx = min((x1-x2)**2, (self.xl-abs(x1-x2))**2)
         ry = min((y1-y2)**2, (self.yl-abs(y1-y2))**2)
-        assert 0<=rx<=(self.xl/2)**2 and 0<=ry<=(self.yl/2)**2, '周期境界条件の補正に失敗しています[rx={},ry={}]'.format(rx, ry)
-        return (rx + ry)**0.5
+        rz = min((z1-z2)**2, (self.zl-abs(z1-z2))**2)
+        assert 0<=rx<=(self.xl/2)**2 and 0<=ry<=(self.yl/2)**2 and 0<=rz<=(self.zl/2)**2, '周期境界条件の補正に失敗しています[rx={},ry={},rz={}]'.format(rx, ry, rz)
+        return (rx + ry + rz)**0.5
     
     def add_particle(self, particle):
         self.particles.append(particle)
@@ -68,11 +78,13 @@ class SimulationBox:
 
     ### 空間分割の仕方を保存
     ### この関数ここにいるべきなのか、要検討
-    def set_subregion(self, xn, yn, sd_xl, sd_yl):
+    def set_subregion(self, xn, yn, zn, sd_xl, sd_yl, sd_zl):
         self.xn = xn
         self.yn = yn
+        self.zn = zn
         self.sd_xl = sd_xl
         self.sd_yl = sd_yl
+        self.sd_zl = sd_zl
 
 
 
@@ -91,9 +103,10 @@ class Potential:
 
 def periodic(proc):
     for i in range(len(proc.particles)):
-        x, y = proc.Box.periodic_coordinate(proc.particles[i].x, proc.particles[i].y)
+        x, y, z = proc.Box.periodic_coordinate(proc.particles[i].x, proc.particles[i].y, proc.particles[i].z)
         proc.particles[i].x = x
         proc.particles[i].y = y
+        proc.particles[i].z = z
     return proc
 
 
@@ -103,6 +116,7 @@ def kinetic_energy(proc):
     for p in proc.subregion.particles:
         k += p.vx ** 2
         k += p.vy ** 2
+        k += p.vz ** 2
     k /= 2
     return k
 
@@ -119,7 +133,7 @@ def potential_energy(proc):
         jp = proc.subregion.particles[pl.j]
         assert ip.id==pl.idi and jp.id==pl.idj, '参照している粒子IDが一致しません'
         assert ip.id != jp.id, '同一粒子ペアがリストに含まれています'
-        r = proc.Box.periodic_distance(ip.x, ip.y, jp.x, jp.y)
+        r = proc.Box.periodic_distance(ip.x, ip.y, ip.z, jp.x, jp.y, jp.z)
         if r > proc.Box.cutoff:
             continue
         v += proc.Box.Potential.potential(r) - 4.0*(1/proc.Box.cutoff**12 - 1/proc.Box.cutoff**6) 
@@ -130,7 +144,7 @@ def potential_energy(proc):
         jp = proc.particles_in_neighbor[pl.j]
         assert ip.id==pl.idi and jp.id==pl.idj, '粒子IDが一致しません'
         assert ip.id != jp.id, '同一粒子ペアがリストに含まれています'
-        r = proc.Box.periodic_distance(ip.x, ip.y, jp.x, jp.y)
+        r = proc.Box.periodic_distance(ip.x, ip.y, ip.z, jp.x, jp.y, jp.z)
         if r > proc.Box.cutoff:
             continue
         v += proc.Box.Potential.potential(r) - 4.0*(1/proc.Box.cutoff**12 - 1/proc.Box.cutoff**6) 

@@ -1,9 +1,9 @@
 # ===================================================
 ## シミュレーション本体の各過程をメソッドにまとめておく
 # ===================================================
-from two import particle
-from two import box
-from two import sdd
+from three import particle
+from three import box
+from three import sdd
 
 from math import pi, sin, cos, ceil, sqrt
 import random
@@ -49,7 +49,7 @@ class DomainPairList:
             return True
         if not (self.centers[i] and self.centers[j]):
             return True
-        diff = box.periodic_distance(self.centers[i][0], self.centers[i][1], self.centers[j][0], self.centers[j][1])
+        diff = box.periodic_distance(self.centers[i][0], self.centers[i][1], self.centers[i][2], self.centers[j][0], self.centers[j][1], self.centers[j][2])
         if (diff - self.radii[i] - self.radii[j]) > box.co_p_margin:
             return True
 
@@ -115,7 +115,7 @@ class DomainPairList:
             for j in range(i+1, len(particles)):
                 ip = particles[i]
                 jp = particles[j]
-                r = box.periodic_distance(ip.x, ip.y, jp.x, jp.y)
+                r = box.periodic_distance(ip.x, ip.y, ip.z, jp.x, jp.y, jp.z)
                 if r > box.co_p_margin:
                     continue
                 P = Pair(i, j, ip.id, jp.id)
@@ -134,7 +134,7 @@ class DomainPairList:
             for j in range(len(other_particles)):
                 ip = my_particles[i]
                 jp = other_particles[j]   ### jが他領域の粒子
-                r = box.periodic_distance(ip.x, ip.y, jp.x, jp.y)
+                r = box.periodic_distance(ip.x, ip.y, ip.z, jp.x, jp.y, jp.z)
                 if r > box.co_p_margin:
                     continue
                 P = Pair(i, j, ip.id, jp.id)
@@ -153,43 +153,55 @@ def make_conf(Machine):
     N = Box.N
     xl = Box.xl   ### 液滴を作りたいときは、ここの値を減らす
     yl = Box.yl
+    zl = Box.zl
     x_min = Box.x_min
     y_min = Box.y_min
+    z_min = Box.z_min
     x_max = Box.x_max
     y_max = Box.y_max
-    xppl = ceil(sqrt(xl*N/yl))
-    yppl = ceil(sqrt(yl*N/xl))
-    pitch = min(xl/xppl, yl/yppl)
+    z_max = Box.z_max
+    xppl = ceil((xl**2*N/(yl*zl))**(1/3))
+    yppl = ceil((yl**2*N/(xl*zl))**(1/3))
+    zppl = ceil((zl**2*N/(xl*yl))**(1/3))
+    pitch = min(xl/xppl, yl/yppl, zl/zppl)
 
     ### 等間隔分割の仕方を取得
     Box = sdd.get_simple_array(Box, len(Machine.procs))
     xn = Box.xn
     yn = Box.yn
+    zn = Box.zn
     sd_xl = Box.sd_xl
     sd_yl = Box.sd_yl
+    sd_zl = Box.sd_zl
     Machine.set_boxes(Box)
 
     for j in range(N):
         ### 粒子位置決める
-        jy = j//xppl
-        jx = j%xppl
+        jz = j//(xppl*yppl)
+        jy = (j%(xppl*yppl))//xppl
+        jx = (j%(xppl*yppl))%xppl
         x = jx*pitch
         y = jy*pitch
+        z = jz*pitch
         ### 粒子をどの領域=プロセスに分配する
-        ip = int((y//sd_yl)*xn + x//sd_xl)
+        ip = int((z//sd_zl)*(xn*yn) + (y//sd_yl)*xn + x//sd_xl)
         ### 原点を中心にした座標系
         x += x_min
         y += y_min
-        Particle = particle.Particle(j,x,y)
-        Machine.procs[ip].subregion.particles.append(Particle)
+        z += z_min
+        p = particle.Particle(j,x,y,z)
+        Machine.procs[ip].subregion.particles.append(p)
         assert x_min <= x < x_max, '初期配置が適切ではありません'
         assert y_min <= y < y_max, '初期配置が適切ではありません'
+        assert z_min <= z < z_max, '初期配置が適切ではありません'
     for i,proc in enumerate(Machine.procs):
-        bottom = i//xn * sd_yl + y_min
-        left   = i%xn * sd_xl + x_min
-        top    = (i//xn + 1) * sd_yl + y_min
-        right  = (i%xn + 1) * sd_xl + x_min
-        Machine.procs[i].subregion.set_limit(top, right, bottom, left)
+        left   = (i%yn) * sd_xl + x_min
+        right  = (i%yn + 1) * sd_xl + x_min
+        front  = ((i%(xn*yn))//yn) * sd_yl + y_min
+        back   = ((i%(xn*yn))//yn + 1) * sd_yl + y_min
+        top    = (i//(xn*yn) + 1) * sd_zl + z_min
+        bottom = i//(xn*yn) * sd_zl + z_min
+        Machine.procs[i].subregion.set_limit(top, bottom, right, left, front, back)
     return Machine
 
 
@@ -198,23 +210,30 @@ def make_conf(Machine):
 def set_initial_velocity(v0, Machine):
     avx = 0.0
     avy = 0.0
+    avz = 0.0
     for i, proc in enumerate(Machine.procs):
         for j, p in enumerate(proc.subregion.particles):
+            xi    = random.random() * 1.0 * pi
             theta = random.random() * 2.0 * pi
-            vx = v0 * cos(theta)
-            vy = v0 * sin(theta)
+            vx = v0 * cos(theta) * sin(xi)
+            vy = v0 * sin(theta) * sin(xi)
+            vz = v0 * cos(xi)
             p.vx = vx
             p.vy = vy
+            p.vz = vz
             proc.subregion.particles[j] = p
             avx += vx
             avy += vy
+            avz += vz
         Machine.procs[i] = proc
     avx /= Machine.procs[0].Box.N
     avy /= Machine.procs[0].Box.N
+    avz /= Machine.procs[0].Box.N
     for i, proc in enumerate(Machine.procs):
         for j in range(len(proc.subregion.particles)):
             proc.subregion.particles[j].vx -= avx
             proc.subregion.particles[j].vy -= avy
+            proc.subregion.particles[j].vz -= avz
     return Machine
 
 
@@ -241,17 +260,20 @@ def calculate_force(proc, dt):
         ip = my_particles[pair.i]
         jp = my_particles[pair.j]
         assert ip.id==pair.idi and jp.id==pair.idj, 'ペアリストIDと選択された粒子IDが一致しません'
-        r = Box.periodic_distance(ip.x, ip.y, jp.x, jp.y)
+        r = Box.periodic_distance(ip.x, ip.y, ip.z, jp.x, jp.y, jp.z)
         if r > Box.cutoff:
             continue
         df = (24.0 * r**6 - 48.0) / r**14 * dt
 
         dx = periodic_od(Box.xl,jp.x-ip.x)
         dy = periodic_od(Box.yl,jp.y-ip.y)
+        dz = periodic_od(Box.zl,jp.z-ip.z)
         ip.vx += df * dx
         ip.vy += df * dy
+        ip.vz += df * dz
         jp.vx -= df * dx
         jp.vy -= df * dy
+        jp.vz -= df * dz
         my_particles[pair.i] = ip
         my_particles[pair.j] = jp
     
@@ -262,19 +284,22 @@ def calculate_force(proc, dt):
         ip = my_particles[pair.i]
         jp = other_particles[pair.j]
         assert ip.id==pair.idi and jp.id==pair.idj, 'ペアリストIDと選択された粒子IDが一致しません'
-        r = Box.periodic_distance(ip.x, ip.y, jp.x, jp.y)
+        r = Box.periodic_distance(ip.x, ip.y, ip.z, jp.x, jp.y, jp.z)
         if r > Box.cutoff:
             continue
         df = (24.0 * r**6 - 48.0) / r**14 * dt
 
         dx = periodic_od(Box.xl,jp.x-ip.x)
         dy = periodic_od(Box.yl,jp.y-ip.y)
+        dz = periodic_od(Box.zl,jp.z-ip.z)
         ip.vx += df * dx
         ip.vy += df * dy
+        ip.vz += df * dz
         ### 他領域の粒子の力積は追加分しか記録しない
-        kp = particle.Particle(jp.id, jp.x, jp.y)
+        kp = particle.Particle(jp.id, jp.x, jp.y, jp.z)
         kp.vx = -df * dx
         kp.vy = -df * dy
+        kp.vz = -df * dz
         my_particles[pair.i] = ip
         sending_velocities.append(kp)
 
@@ -291,9 +316,11 @@ def update_position(proc, dt):
     for i,p in enumerate(proc.subregion.particles):
         p.x += p.vx * dt
         p.y += p.vy * dt
-        p.x, p.y = proc.Box.periodic_coordinate(p.x, p.y)
+        p.z += p.vz * dt
+        p.x, p.y, p.z = proc.Box.periodic_coordinate(p.x, p.y, p.z)
         assert proc.Box.x_min <= p.x <= proc.Box.x_max, '粒子が境界から出ています'
         assert proc.Box.y_min <= p.y <= proc.Box.y_max, '粒子が境界から出ています'
+        assert proc.Box.z_min <= p.z <= proc.Box.z_max, '粒子が境界から出ています'
         proc.subregion.particles[i] = p
     
     proc.stop_watch()
@@ -308,16 +335,16 @@ def export_cdview(proc, step, head=False):
     if head:
         with open(filename, 'a') as f:
             f.write('#box_sx={}\n'.format(proc.Box.x_min))
-            f.write('#box_sy={}\n'.format(proc.Box.y_min))
             f.write('#box_ex={}\n'.format(proc.Box.x_max))
+            f.write('#box_sy={}\n'.format(proc.Box.y_min))
             f.write('#box_ey={}\n'.format(proc.Box.y_max))
-            f.write('#box_sz={}\n'.format(0))
-            f.write('#box_ez={}\n'.format(0))
+            f.write('#box_sz={}\n'.format(proc.Box.z_min))
+            f.write('#box_ez={}\n'.format(proc.Box.z_max))
     else:
         rank = proc.rank
         with open(filename, 'a') as f:
             for i,p in enumerate(proc.subregion.particles):
-                f.write('{} {} {} {} 0\n'.format(p.id, rank, p.x, p.y))
+                f.write('{} {} {} {} {}\n'.format(p.id, rank, p.x, p.y, p.z))
 
 
 
