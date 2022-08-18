@@ -61,7 +61,7 @@ class SimulationBox:
         rx = min((x1-x2)**2, (self.xl-abs(x1-x2))**2)
         ry = min((y1-y2)**2, (self.yl-abs(y1-y2))**2)
         rz = min((z1-z2)**2, (self.zl-abs(z1-z2))**2)
-        assert 0<=rx<=(self.xl/2)**2 and 0<=ry<=(self.yl/2)**2 and 0<=rz<=(self.zl/2)**2, '周期境界条件の補正に失敗しています[rx={},ry={},rz={}]'.format(rx, ry, rz)
+        # assert 0<=rx<=(self.xl/2)**2 and 0<=ry<=(self.yl/2)**2 and 0<=rz<=(self.zl/2)**2, '周期境界条件の補正に失敗しています[rx={},ry={},rz={}]'.format(rx, ry, rz)
         return (rx + ry + rz)**0.5
     
     def add_particle(self, particle):
@@ -132,7 +132,6 @@ def potential_energy(proc):
         ip = proc.subregion.particles[pl.i]
         jp = proc.subregion.particles[pl.j]
         assert ip.id==pl.idi and jp.id==pl.idj, '参照している粒子IDが一致しません'
-        assert ip.id != jp.id, '同一粒子ペアがリストに含まれています'
         r = proc.Box.periodic_distance(ip.x, ip.y, ip.z, jp.x, jp.y, jp.z)
         if r > proc.Box.cutoff:
             continue
@@ -143,7 +142,6 @@ def potential_energy(proc):
         ip = proc.subregion.particles[pl.i]
         jp = proc.particles_in_neighbor[pl.j]
         assert ip.id==pl.idi and jp.id==pl.idj, '粒子IDが一致しません'
-        assert ip.id != jp.id, '同一粒子ペアがリストに含まれています'
         r = proc.Box.periodic_distance(ip.x, ip.y, ip.z, jp.x, jp.y, jp.z)
         if r > proc.Box.cutoff:
             continue
@@ -160,6 +158,8 @@ def read_lammps(Machine, filename):
     x_max = ''
     y_min = ''
     y_max = ''
+    z_min = ''
+    z_max = ''
     N = ''
     with open(filename) as f:
         Line = [s.strip() for s in f.readlines()]
@@ -202,31 +202,52 @@ def read_lammps(Machine, filename):
                         y_max += s
                     else:
                         break
+            
+            if i == 7:
+                index = 0
+                for s in l:
+                    if s == ' ':
+                        index += 1
+                        continue
+                    if index == 0:
+                        z_min += s
+                    elif index == 1:
+                        z_max += s
+                    else:
+                        break
                 break
 
     ### 系の情報を入力に合わせて変更
     box = Machine.procs[0].Box
     x_min = float(x_min)
     y_min = float(y_min)
+    z_min = float(z_min)
     x_max = float(x_max)
     y_max = float(y_max)
+    z_max = float(z_max)
     xl = x_max - x_min
     yl = y_max - y_min
+    zl = z_max - z_min
 
     box.xl = xl
     box.yl = yl
+    box.zl = zl
     box.x_min = x_min
     box.y_min = y_min
+    box.z_min = z_min
     box.x_max = x_max
     box.y_max = y_max
+    box.z_max = z_max
     box.N = float(N)
     
     ### 等間隔分割の仕方を取得
     box = sdd.get_simple_array(box, len(Machine.procs))
     xn = box.xn
     yn = box.yn
+    zn = box.zn
     sd_xl = box.sd_xl
     sd_yl = box.sd_yl
+    sd_zl = box.sd_zl
     Machine.set_boxes(box)
 
     ### 粒子情報の読み込み
@@ -234,7 +255,7 @@ def read_lammps(Machine, filename):
         Line = [s.strip() for s in f.readlines()]
         is_last = 0
         for l in range(0,len(Line)):
-            if Line[l] == 'ITEM: ATOMS id x y vx vy':
+            if Line[l] == 'ITEM: ATOMS id x y z vx vy vz':
                 is_last += 1
                 continue
             if is_last != 2:
@@ -242,8 +263,10 @@ def read_lammps(Machine, filename):
             ids = ''
             xs  = ''
             ys  = ''
+            zs  = ''
             vxs = ''
             vys = ''
+            vzs = ''
             index = 0
             for s in Line[l]:
                 if s == ' ':
@@ -256,37 +279,46 @@ def read_lammps(Machine, filename):
                 elif index == 2:
                     ys  += s
                 elif index == 3:
-                    vxs += s
+                    zs  += s
                 elif index == 4:
+                    vxs += s
+                elif index == 5:
                     vys += s
+                elif index == 6:
+                    vzs += s
             
             ### 原点が端っこになる座標系
             x = float(xs) - x_min
             y = float(ys) - y_min
+            z = float(zs) - z_min
             
             ### 粒子をどの領域=プロセスに分配するか
-            ip = int((y//sd_yl)*xn + x//sd_xl)
+            ip = int((z//sd_zl)*(xn*yn) + (y//sd_yl)*xn + x//sd_xl)
 
             ### 原点を中心にした座標系
             x += x_min
             y += y_min
+            z += z_min
 
-            p = particle.Particle(int(ids), x, y)
-            p.set_velocity(float(vxs), float(vys))
+            p = particle.Particle(int(ids), x, y, z)
+            p.set_velocity(float(vxs), float(vys), float(vzs))
 
             Machine.procs[ip].subregion.particles.append(p)
-            assert x_min <= x < x_max, '初期配置が適切ではありません'
-            assert y_min <= y < y_max, '初期配置が適切ではありません'
+            assert x_min <= x <= x_max, '初期配置が適切ではありません'
+            assert y_min <= y <= y_max, '初期配置が適切ではありません'
+            assert z_min <= z <= z_max, '初期配置が適切ではありません'
     
     assert max(Machine.count())!=0, '粒子情報が正しく読み込まれていません'
     
     for i,proc in enumerate(Machine.procs):
-        bottom = i//xn * sd_yl + y_min
-        left   = i%xn * sd_xl + x_min
-        top    = (i//xn + 1) * sd_yl + y_min
-        right  = (i%xn + 1) * sd_xl + x_min
-        Machine.procs[i].subregion.set_limit(top, right, bottom, left)
-    
+        left   = (i%yn) * sd_xl + x_min
+        right  = (i%yn + 1) * sd_xl + x_min
+        front  = ((i%(xn*yn))//yn) * sd_yl + y_min
+        back   = ((i%(xn*yn))//yn + 1) * sd_yl + y_min
+        top    = (i//(xn*yn) + 1) * sd_zl + z_min
+        bottom = i//(xn*yn) * sd_zl + z_min
+        Machine.procs[i].subregion.set_limit(top, bottom, right, left, front, back)
+   
     return Machine
 
 # ==============================================================
