@@ -6,6 +6,7 @@ from three import sim
 from three import particle
 from three import sdd
 
+from numba import jit, njit
 import random
 
 random.seed(1)
@@ -31,6 +32,7 @@ class SimulationBox:
         self.Potential = Potential()
 
     ## 下の関数用
+    @jit
     def modify(self, x, x_max, x_min, L):
         if x > x_max:
             x -= L
@@ -58,10 +60,7 @@ class SimulationBox:
     
     ## 周期境界条件を考慮した距離を返す
     def periodic_distance(self, x1, y1, z1, x2, y2, z2):
-        rx = min((x1-x2)**2, (self.xl-abs(x1-x2))**2)
-        ry = min((y1-y2)**2, (self.yl-abs(y1-y2))**2)
-        rz = min((z1-z2)**2, (self.zl-abs(z1-z2))**2)
-        # assert 0<=rx<=(self.xl/2)**2 and 0<=ry<=(self.yl/2)**2 and 0<=rz<=(self.zl/2)**2, '周期境界条件の補正に失敗しています[rx={},ry={},rz={}]'.format(rx, ry, rz)
+        rx,ry,rz = periodic_d(x1,x2,y1,y2,z1,z2,self.xl,self.yl,self.zl)
         return (rx + ry + rz)**0.5
     
     def add_particle(self, particle):
@@ -101,13 +100,24 @@ class Potential:
 
 # -----------------------------------------------------------------------
 
-def periodic(proc):
-    for i in range(len(proc.particles)):
-        x, y, z = proc.Box.periodic_coordinate(proc.particles[i].x, proc.particles[i].y, proc.particles[i].z)
-        proc.particles[i].x = x
-        proc.particles[i].y = y
-        proc.particles[i].z = z
-    return proc
+@jit
+def periodic_d(x1,x2,y1,y2,z1,z2,xl,yl,zl):
+    rx = min((x1-x2)**2, (xl-abs(x1-x2))**2)
+    ry = min((y1-y2)**2, (yl-abs(y1-y2))**2)
+    rz = min((z1-z2)**2, (zl-abs(z1-z2))**2)
+    return rx, ry, rz
+
+
+
+@jit
+def periodic(x, xl, x_min, x_max):
+    if not (x_min <= x <= x_max):
+        if x > x_max:
+            x -= xl
+        elif x < x_min:
+            x += xl
+    assert x_min<=x<=x_max, '周期境界補正に失敗しています'
+    return x
 
 
 

@@ -5,6 +5,7 @@ from three import particle
 from three import box
 from three import sdd
 
+from numba import jit, njit
 from math import pi, sin, cos, ceil, sqrt
 import random
 
@@ -239,6 +240,7 @@ def set_initial_velocity(v0, Machine):
 
 
 ## 一方向についての、周期境界を考慮した距離
+@njit
 def periodic_od(L,dx):
     LH = L/2
     if dx < -LH:
@@ -265,15 +267,15 @@ def calculate_force(proc, dt):
             continue
         df = (24.0 * r**6 - 48.0) / r**14 * dt
 
-        dx = periodic_od(Box.xl,jp.x-ip.x)
-        dy = periodic_od(Box.yl,jp.y-ip.y)
-        dz = periodic_od(Box.zl,jp.z-ip.z)
-        ip.vx += df * dx
-        ip.vy += df * dy
-        ip.vz += df * dz
-        jp.vx -= df * dx
-        jp.vy -= df * dy
-        jp.vz -= df * dz
+        dfdx = periodic_od(Box.xl,jp.x-ip.x) * df
+        dfdy = periodic_od(Box.yl,jp.y-ip.y) * df
+        dfdz = periodic_od(Box.zl,jp.z-ip.z) * df
+        ip.vx += dfdx
+        ip.vy += dfdy
+        ip.vz += dfdz
+        jp.vx -= dfdx
+        jp.vy -= dfdy
+        jp.vz -= dfdz
         my_particles[pair.i] = ip
         my_particles[pair.j] = jp
     
@@ -289,17 +291,17 @@ def calculate_force(proc, dt):
             continue
         df = (24.0 * r**6 - 48.0) / r**14 * dt
 
-        dx = periodic_od(Box.xl,jp.x-ip.x)
-        dy = periodic_od(Box.yl,jp.y-ip.y)
-        dz = periodic_od(Box.zl,jp.z-ip.z)
-        ip.vx += df * dx
-        ip.vy += df * dy
-        ip.vz += df * dz
+        dfdx = periodic_od(Box.xl,jp.x-ip.x) * df
+        dfdy = periodic_od(Box.yl,jp.y-ip.y) * df
+        dfdz = periodic_od(Box.zl,jp.z-ip.z) * df
+        ip.vx += dfdx
+        ip.vy += dfdy
+        ip.vz += dfdz
         ### 他領域の粒子の力積は追加分しか記録しない
         kp = particle.Particle(jp.id, jp.x, jp.y, jp.z)
-        kp.vx = -df * dx
-        kp.vy = -df * dy
-        kp.vz = -df * dz
+        kp.vx = -dfdx
+        kp.vy = -dfdy
+        kp.vz = -dfdz
         my_particles[pair.i] = ip
         sending_velocities.append(kp)
 
@@ -313,14 +315,15 @@ def calculate_force(proc, dt):
 
 def update_position(proc, dt):
     proc.start_watch()
+    Box = proc.Box
     for i,p in enumerate(proc.subregion.particles):
         p.x += p.vx * dt
         p.y += p.vy * dt
         p.z += p.vz * dt
-        p.x, p.y, p.z = proc.Box.periodic_coordinate(p.x, p.y, p.z)
-        assert proc.Box.x_min <= p.x <= proc.Box.x_max, '粒子が境界から出ています'
-        assert proc.Box.y_min <= p.y <= proc.Box.y_max, '粒子が境界から出ています'
-        assert proc.Box.z_min <= p.z <= proc.Box.z_max, '粒子が境界から出ています'
+        # p.x, p.y, p.z = proc.Box.periodic_coordinate(p.x, p.y, p.z)
+        p.x = box.periodic(p.x, Box.xl, Box.x_min, Box.x_max)
+        p.y = box.periodic(p.y, Box.yl, Box.y_min, Box.y_max)
+        p.z = box.periodic(p.z, Box.zl, Box.z_min, Box.z_max)
         proc.subregion.particles[i] = p
     
     proc.stop_watch()
