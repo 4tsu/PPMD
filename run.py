@@ -12,7 +12,7 @@ ppmd = PPMD(10, 10, 0.0020)
 ppmd.set_box(200, 10, 10, 10, 3.5)
 ppmd.set_margin(0.5)
 ppmd.set_envs(8)
-ppmd.set_sdd(0)
+ppmd.set_sdd(1)
 ppmd.make_data('three/droplet.dump')
 ppmd.set_mode()
 

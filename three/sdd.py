@@ -163,9 +163,9 @@ def get_simple_array(Box, np):
         if abs(max(xyzn)-min(xyzn)) < n_best:
             n_best = abs(max(xyzn)-min(xyzn))
             i_best = i
-    xn = xyzn_list[i_best][0]
-    yn = xyzn_list[i_best][1]
-    zn = xyzn_list[i_best][2]
+    xn = int(xyzn_list[i_best][0])
+    yn = int(xyzn_list[i_best][1])
+    zn = int(xyzn_list[i_best][2])
     Box.set_subregion(xn, yn, zn, xl/xn, yl/yn, zl/zn)
     return Box
 
@@ -209,80 +209,69 @@ def xybin(Machine):
     datalist = []
     for proc in Machine.procs:
         for p in proc.subregion.particles:
-            datalist.append([p.id, p.x, p.y, p.vx, p.vy])
+            datalist.append([p.id, p.x, p.y, p.z, p.vx, p.vy, p.vz])
     data = np.array(datalist)
-    ### まずはY軸方向についてソート
-    sortedIndexY = np.argsort(data, axis=0)
+    ### まずはZ軸方向についてソート
+    sortedIndexZ = np.argsort(data, axis=0)
 
     box = Machine.procs[0].Box
     xn = box.xn
     yn = box.yn
+    zn = box.zn
 
-    Py = []
-    By = []
-    numy = int(box.N//yn)
-    for i in range(yn):
-        Oy = []
+    all_particles = []
+    boundaries_z = []
+    numz = int(box.N//zn)
+    for i in range(zn):
+        z_group = []
 
-        for j in range(numy+1):
-            k = i*(numy+1) + j
+        for j in range(numz+1):
+            k = i*(numz+1) + j
             if k >= len(data):
                 break
-            Oy.append(datalist[sortedIndexY[k,2]])
+            z_group.append(datalist[sortedIndexZ[k,3]])
 
-        Py.append(Oy)
+        all_particles.append(z_group)
 
-    ### いちおう領域の境界も入れておこう
-    for i in range(len(Py)):
-        if i == 0:
-            b = box.y_min
-        else:
-            b = (Py[i-1][-1][2] + Py[i][0][2])/2
-        if i == len(Py)-1:
-            t = box.y_max
-        else:
-            t = (Py[i][-1][2] + Py[i+1][0][2])/2
-        By.append([t, b])
+    ## 次にYX軸方向についてのソート
+    for h,z_group in enumerate(all_particles):
+        ### Y軸方向
+        data = np.array(z_group)
+        sortedIndexY = np.argsort(data, axis=0)
+        numy = int(len(z_group)//yn)
 
-    ### 次にX軸方向についてのソート
-    for h,Q in enumerate(Py):
-        datalist = np.array(Q)
-        sortedIndexX = np.argsort(datalist, axis=0)
-        numx = int(len(Q)//xn)
-
-        k = 0
-        for i in range(xn):
-            proc_index = h*xn + i
-            Machine.procs[proc_index].subregion.particles.clear()
-            new_particles = []
-
-            ### ぴったりより一個余分に詰めていき、最後は少し少なくなるのでbreakで脱出
-            for j in range(numx+1):
-                if len(Q) <= k:
+        z_particles = []
+        for i in range(yn):
+            y_group = []
+            for j in range(numy+1):
+                k = i*(numy+1) + j
+                if k >= len(data):
                     break
-                pdata = datalist[sortedIndexX[k,1]]
-                p = particle.Particle(pdata[0], pdata[1], pdata[2])
-                p.set_velocity(pdata[3], pdata[4])
-                new_particles.append(p)
-                k += 1
-            
-            Machine.procs[proc_index].subregion.particles = new_particles
+                y_group.append(z_group[sortedIndexY[k,2]])
+            z_particles.append(y_group)
+        
+        for i,y_group in enumerate(z_particles):
+            data = np.array(y_group)
+            sortedIndexX = np.argsort(data, axis=0)
+            numx = int(len(y_group)//xn)
 
-            ### 領域の境界
-            if i == 0:
-                l = box.x_min
-            else:
-                l = (Q[sortedIndexX[j-1,1]][1] + Q[sortedIndexX[j,1]][1])/2
-            if i == xn-1:
-                r = box.x_max
-            else:
-                r = (Q[sortedIndexX[j,0]][1] + Q[sortedIndexX[j+1,0]][1])/2
-            
-            Machine.procs[proc_index].subregion.boundaries.append([0.0, 1.0, -1*By[h][0]])
-            Machine.procs[proc_index].subregion.boundaries.append([1.0, 0.0, -1*r])
-            Machine.procs[proc_index].subregion.boundaries.append([0.0, 1.0, -1*By[h][1]])
-            Machine.procs[proc_index].subregion.boundaries.append([1.0, 0.0, -1*l])
-    
+            for j in range(xn):
+                proc_index = h*(yn*xn) + i*yn + j
+                Machine.procs[proc_index].subregion.particles.clear()
+                new_particles = []
+
+                ### ぴったりより一個余分に詰めていき、最後は少し少なくなるのでbreakで脱出
+                for k in range(numx+1):
+                    l = j*(numx+1) + k
+                    if len(data) <= l:
+                        break
+                    pdata = y_group[sortedIndexX[l,1]]
+                    p = particle.Particle(pdata[0], pdata[1], pdata[2], pdata[3])
+                    p.set_velocity(pdata[4], pdata[5], pdata[6])
+                    new_particles.append(p)
+                
+                Machine.procs[proc_index].subregion.particles = new_particles
+   
     return Machine
 
 
