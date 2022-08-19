@@ -19,3 +19,6 @@ class Particle:
         self.vx = vx
         self.vy = vy
         self.vz = vz
+
+    def set_process(self, proc):
+        self.proc = proc

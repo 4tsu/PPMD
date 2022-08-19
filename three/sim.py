@@ -303,6 +303,7 @@ def calculate_force(proc, dt):
         kp.vy = -dfdy
         kp.vz = -dfdz
         my_particles[pair.i] = ip
+        kp.set_process(jp.proc)
         sending_velocities.append(kp)
 
     proc.subregion.particles = my_particles

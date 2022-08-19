@@ -121,6 +121,7 @@ class Machine:
             for j_pair in proc.domain_pair_list.list[i]:
                 assert j_pair[0] == i, '領域ペアリストが不適切です'
                 for p in self.procs[j_pair[1]].subregion.particles:
+                    p.set_process(j_pair[1])
                     self.procs[i].particles_in_neighbor.append(p)
         
         ### 最大通信量だけ返す
@@ -136,29 +137,19 @@ class Machine:
             ### 相互作用した粒子について、
             # print(len(proci.sending_velocities))
             for j, pj in enumerate(proci.sending_velocities):
-                flag = False   ### 正解のペアを見つけたらすぐにループを抜ける用のflag
-                
-                ### 他の相互作用する可能性のある領域を全探索して、該当する粒子を探して速度を書き戻す
-                for k in proci.domain_pair_list.list[i]:
-                    prock = self.procs[k[1]]
-                    assert          i == k[0], '領域ペアリストが正しく参照されていません'
-                    assert prock.rank == k[1], '領域ペアリストが正しく参照されていません'
+                for k, pk in enumerate(self.procs[pj.proc].subregion.particles):
+                    if pj.id != pk.id:
+                        continue
+                    # print('b {:8.6f} {:8.6f}'.format(pl.vx, pl.vy))
+                    # print('j {:8.6f} {:8.6f}'.format(pj.vx, pj.vy))
+                    pk.vx += pj.vx
+                    pk.vy += pj.vy
+                    pk.vz += pj.vz
+                    # print('a {:8.6f} {:8.6f}'.format(pl.vx, pl.vy))
+                    self.procs[pj.proc].subregion.particles[k] = pk
+                    comms[i,pj.proc] = pk.__sizeof__()
+                    break
 
-                    for l, pl in enumerate(prock.subregion.particles):
-                        if pj.id != pl.id:
-                            continue
-                        # print('b {:8.6f} {:8.6f}'.format(pl.vx, pl.vy))
-                        # print('j {:8.6f} {:8.6f}'.format(pj.vx, pj.vy))
-                        pl.vx += pj.vx
-                        pl.vy += pj.vy
-                        pl.vz += pj.vz
-                        # print('a {:8.6f} {:8.6f}'.format(pl.vx, pl.vy))
-                        self.procs[k[1]].subregion.particles[l] = pl
-                        comms[i,k[1]] = pl.__sizeof__()
-                        flag = True
-                        break
-                    if flag:
-                        break
         comm2 = self.communicate_particles()
         return np.max(comms)+comm2
 
