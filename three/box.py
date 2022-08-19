@@ -31,29 +31,22 @@ class SimulationBox:
 
         self.Potential = Potential()
 
-    ## 下の関数用
-    @jit
-    def modify(self, x, x_max, x_min, L):
-        if x > x_max:
-            x -= L
-        elif x < x_min:
-            x += L
-        return x
+
 
     ## 周期境界条件の適用
     def periodic_coordinate(self, x, y, z):
         if not (self.x_min <= x <= self.x_max):
             while not (self.x_min <= x <= self.x_max):
-                x = self.modify(x, self.x_max, self.x_min, self.xl)
+                x = modify(x, self.x_max, self.x_min, self.xl)
                 # print(x)
         
         if not (self.y_min <= y <= self.y_max):
             while not (self.y_min <= y <= self.y_max):
-                y = self.modify(y, self.y_max, self.y_min, self.yl)
+                y = modify(y, self.y_max, self.y_min, self.yl)
         
         if not (self.z_min <= z <= self.z_max):
             while not (self.z_min <= z <= self.z_max):
-                z = self.modify(z, self.z_max, self.z_min, self.zl)
+                z = modify(z, self.z_max, self.z_min, self.zl)
         
         assert self.x_min<=x<=self.x_max and self.y_min<=y<=self.y_max and self.z_min<=z<=self.z_max, '周期境界補正に失敗しています'
         return x, y, z
@@ -100,7 +93,7 @@ class Potential:
 
 # -----------------------------------------------------------------------
 
-@jit
+@njit("Tuple((f8,f8,f8))(f8,f8,f8,f8,f8,f8,f8,f8,f8)")
 def periodic_d(x1,x2,y1,y2,z1,z2,xl,yl,zl):
     rx = min((x1-x2)**2, (xl-abs(x1-x2))**2)
     ry = min((y1-y2)**2, (yl-abs(y1-y2))**2)
@@ -109,7 +102,7 @@ def periodic_d(x1,x2,y1,y2,z1,z2,xl,yl,zl):
 
 
 
-@jit
+@njit("f8(f8,f8,f8,f8)")
 def periodic(x, xl, x_min, x_max):
     if not (x_min <= x <= x_max):
         if x > x_max:
@@ -117,6 +110,16 @@ def periodic(x, xl, x_min, x_max):
         elif x < x_min:
             x += xl
     assert x_min<=x<=x_max, '周期境界補正に失敗しています'
+    return x
+
+
+## periodic_coordinate用
+@njit("f8(f8,f8,f8,f8)")
+def modify(x, x_max, x_min, L):
+    if x > x_max:
+        x -= L
+    elif x < x_min:
+        x += L
     return x
 
 
