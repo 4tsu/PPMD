@@ -134,10 +134,18 @@ def kinetic_energy(proc):
     return k
 
 
+## 下で使う用
+@njit("f8(f8,f8,f8,f8)")
+def potential_one_pair(epsilon, rho, cutoff, r):
+    v = epsilon * (rho/r**12 - rho/r**6) - 4.0*(1/cutoff**12 - 1/cutoff**6) 
+    return v
 
 ## ポテンシャルエネルギーの算出
 ### ペアリストを使用するので、事前に要構築
 def potential_energy(proc):
+    epsilon = proc.Box.Potential.epsilon
+    rho     = proc.Box.Potential.rho
+    cutoff  = proc.Box.cutoff
     v = 0
     
     ### 自領域内粒子間ポテンシャル
@@ -148,8 +156,8 @@ def potential_energy(proc):
         r = proc.Box.periodic_distance(ip.x, ip.y, ip.z, jp.x, jp.y, jp.z)
         if r > proc.Box.cutoff:
             continue
-        v += proc.Box.Potential.potential(r) - 4.0*(1/proc.Box.cutoff**12 - 1/proc.Box.cutoff**6) 
-    
+        v += potential_one_pair(epsilon, rho, cutoff, r)
+
     ### 領域をまたいだポテンシャル
     for pl in proc.pairlist_between_neighbor:
         ip = proc.subregion.particles[pl.i]
@@ -158,8 +166,8 @@ def potential_energy(proc):
         r = proc.Box.periodic_distance(ip.x, ip.y, ip.z, jp.x, jp.y, jp.z)
         if r > proc.Box.cutoff:
             continue
-        v += proc.Box.Potential.potential(r) - 4.0*(1/proc.Box.cutoff**12 - 1/proc.Box.cutoff**6) 
-    
+        v += potential_one_pair(epsilon, rho, cutoff, r)
+
     return v
 
 
