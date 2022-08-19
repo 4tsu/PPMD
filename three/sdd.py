@@ -290,11 +290,13 @@ def voronoi_init(Machine):
                 target_left   = Machine.procs[target_j].subregion.left
                 target_top    = Machine.procs[target_j].subregion.top
                 target_bottom = Machine.procs[target_j].subregion.bottom
+                target_front  = Machine.procs[target_j].subregion.front
+                target_back   = Machine.procs[target_j].subregion.back
                 target_width = target_right - target_left
             
                 center_line = target_right - target_width*0.5
                 ### 領域の左側は、空だったプロセスに 
-                Machine.procs[i].subregion.set_limit(target_top, center_line, target_bottom, target_left)
+                Machine.procs[i].subregion.set_limit(target_top, center_line, target_bottom, target_left, target_front, target_back)
                 ### 領域の右側は、もともといたプロセスに
                 Machine.procs[target_j].subregion.left = center_line
 
@@ -322,8 +324,9 @@ def voronoi_init(Machine):
 def voronoi_allocate(Machine, bias):
     xl = Machine.procs[0].Box.xl
     yl = Machine.procs[0].Box.yl
+    zl = Machine.procs[0].Box.zl
     ### 後の計算用に、中心点のデータをnumpyにしておく
-    center_np = np.zeros((Machine.np,2))
+    center_np = np.zeros((Machine.np,3))
     for i,proc in enumerate(Machine.procs):
         center_np[i] = np.array([proc.subregion.center])
     
@@ -332,11 +335,19 @@ def voronoi_allocate(Machine, bias):
         ### 周期境界を考えた、最も近いボロノイ中心点算出
         for j in range(len(proc.subregion.particles)):
             p = Machine.procs[i].subregion.particles.pop()
-            r2_np = (p.x - center_np[:,0])**2 + (p.y - center_np[:,1])**2 - bias
-            r2_np_xreverse = (xl - abs(p.x - center_np[:,0]))**2 + (p.y - center_np[:,0])**2 - bias
-            r2_np_yreverse = (p.x - center_np[:,0])**2 + (yl - abs(p.y - center_np[:,0]))**2 - bias
-            r2_np_xyreverse = (xl - abs(p.x - center_np[:,0]))**2 + (yl - abs(p.y - center_np[:,0]))**2 - bias
-            minimums = np.array([r2_np.min(), r2_np_xreverse.min(), r2_np_yreverse.min(), r2_np_xyreverse.min()])
+
+            r2_np = (p.x - center_np[:,0])**2 + (p.y - center_np[:,1])**2 + (p.z - center_np[:,2])**2 - bias
+
+            r2_np_xreverse = (xl - abs(p.x - center_np[:,0]))**2 + (p.y - center_np[:,1])**2 + (p.z - center_np[:,2])**2 - bias
+            r2_np_yreverse = (p.x - center_np[:,0])**2 + (yl - abs(p.y - center_np[:,1]))**2 + (p.z - center_np[:,2])**2 - bias
+            r2_np_zreverse = (p.x - center_np[:,0])**2 + (p.y - center_np[:,1])**2 + (zl - abs(p.z - center_np[:,2]))**2 - bias
+
+            r2_np_xyreverse = (xl - abs(p.x - center_np[:,0]))**2 + (yl - abs(p.y - center_np[:,0]))**2 + (p.z - center_np[:,2])**2 - bias
+            r2_np_yzreverse = (p.x - center_np[:,0])**2 + (yl - abs(p.y - center_np[:,0]))**2 + (zl - abs(p.z - center_np[:,2]))**2 - bias
+            r2_np_zxreverse = (xl - abs(p.x - center_np[:,0]))**2 + (p.y - center_np[:,0])**2 + (zl - abs(p.z - center_np[:,2]))**2 - bias
+            
+            r2_np_xyzreverse = (xl - abs(p.x - center_np[:,0]))**2 + (yl - abs(p.y - center_np[:,0]))**2 + (zl - abs(p.z - center_np[:,2]))**2 - bias
+            minimums = np.array([r2_np.min(), r2_np_xreverse.min(), r2_np_yreverse.min(), r2_np_zreverse.min(), r2_np_xyreverse.min(), r2_np_yzreverse.min(), r2_np_zxreverse.min(), r2_np_xyzreverse.min()])
 
             ### シミュレーションボックスの境界をまたがない
             if np.argmin(minimums) == 0:
@@ -347,9 +358,21 @@ def voronoi_allocate(Machine, bias):
             ### y方向はまたぐ
             elif np.argmin(minimums) == 2:
                 Machine.procs[np.argmin(r2_np_yreverse)].subregion.particles.append(p)
+            ### z方向はまたぐ
+            elif np.argmin(minimums) == 3:
+                Machine.procs[np.argmin(r2_np_zreverse)].subregion.particles.append(p)
             ### xyともにまたぐ
-            else:
+            elif np.argmin(minimums) == 4:
                 Machine.procs[np.argmin(r2_np_xyreverse)].subregion.particles.append(p)
+            ### yzともにまたぐ
+            elif np.argmin(minimums) == 5:
+                Machine.procs[np.argmin(r2_np_yzreverse)].subregion.particles.append(p)
+            ### xzともにまたぐ
+            elif np.argmin(minimums) == 6:
+                Machine.procs[np.argmin(r2_np_zxreverse)].subregion.particles.append(p)
+            ### xyzずべてまたぐ
+            else:
+                Machine.procs[np.argmin(r2_np_xyzreverse)].subregion.particles.append(p)
 
     return Machine
 
@@ -359,7 +382,7 @@ def voronoi_allocate(Machine, bias):
 ### iteration：アルゴリズムの最大繰り返し回数、alpha：biasの変化係数
 ### early_stop_range：繰り返し時のearly stopを、理想値のどれくらいで発動させるか
 def voronoimc(Machine,
-              iteration=800, alpha=0.012, early_stop_range=0.01):
+              iteration=800, alpha=0.012, early_stop_range=0.05):
     ## 各粒子は、最も近い中心点の領域の所属となる。これをそのまま実装している。
     ## preparation
     method_type_name = 'voronoimc'
@@ -401,8 +424,8 @@ def voronoimc(Machine,
         for i,proc in enumerate(Machine.procs):
             if proc.subregion.bias < -proc.subregion.radius:
                 Machine.procs[i].subregion.bias = -proc.subregion.radius
-            elif proc.subregion.bias > min(proc.Box.xl, proc.Box.yl):
-                Machine.procs[i].subregion.bias = min(proc.Box.xl, proc.Box.yl)
+            elif proc.subregion.bias > min(proc.Box.xl, proc.Box.yl, proc.Box.zl):
+                Machine.procs[i].subregion.bias = min(proc.Box.xl, proc.Box.yl, proc.Box.zl)
 
         ## 4.Atoms move to another cluster or stay
         Machine = voronoi_allocate(Machine, bias)
