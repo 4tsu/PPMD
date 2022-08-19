@@ -314,9 +314,9 @@ def voronoi_allocate(Machine, bias):
         for j in range(len(proc.subregion.particles)):
             p = Machine.procs[i].subregion.particles.pop()
             r2_np = (p.x - center_np[:,0])**2 + (p.y - center_np[:,1])**2 - bias
-            r2_np_xreverse = (xl - abs(p.x - center_np[:,0]))**2 + (p.y - center_np[:,0])**2 - bias
-            r2_np_yreverse = (p.x - center_np[:,0])**2 + (yl - abs(p.y - center_np[:,0]))**2 - bias
-            r2_np_xyreverse = (xl - abs(p.x - center_np[:,0]))**2 + (yl - abs(p.y - center_np[:,0]))**2 - bias
+            r2_np_xreverse = (xl - abs(p.x - center_np[:,0]))**2 + (p.y - center_np[:,1])**2 - bias
+            r2_np_yreverse = (p.x - center_np[:,0])**2 + (yl - abs(p.y - center_np[:,1]))**2 - bias
+            r2_np_xyreverse = (xl - abs(p.x - center_np[:,0]))**2 + (yl - abs(p.y - center_np[:,1]))**2 - bias
             minimums = np.array([r2_np.min(), r2_np_xreverse.min(), r2_np_yreverse.min(), r2_np_xyreverse.min()])
 
             ### シミュレーションボックスの境界をまたがない
@@ -340,7 +340,7 @@ def voronoi_allocate(Machine, bias):
 ### iteration：アルゴリズムの最大繰り返し回数、alpha：biasの変化係数
 ### early_stop_range：繰り返し時のearly stopを、理想値のどれくらいで発動させるか
 def voronoimc(Machine,
-              iteration=800, alpha=0.012, early_stop_range=0.01):
+              iteration=300, alpha=0.010, early_stop_range=0.01):
     ## 各粒子は、最も近い中心点の領域の所属となる。これをそのまま実装している。
     ## preparation
     method_type_name = 'voronoimc'
@@ -401,7 +401,7 @@ def voronoimc(Machine,
         # if (s+1)%1 == 0:
         #     plot_fig(Machine, s+1, method_type_name)
         if max(Machine.count()) <= ideal_count_max:
-            # print('***Early Stop***')
+        #     print('***Early Stop*** #', s)
             break
 
     ### 次回の空間分割のために、バイアスは保存しておく

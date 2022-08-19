@@ -6,6 +6,7 @@ file2 = "'cost_2.dat'"
 
 set output 'calc.png'
 set format y "%.1t{/Symbol \26410^{%T}"
+set key left top
 set xlabel 'step'
 set ylabel 'execution-time per step [s]' offset -0.5, 0.0
 set yrange [0:]
@@ -14,7 +15,7 @@ plot @file0 using 1:2 title 'without load-balancer' w linespoints, @file1 using 
 set output 'comm.png'
 set xlabel 'step'
 set ylabel 'communication-cost per step [byte]'
-set key right center
+set key left top
 set yrange [0:]
 plot @file0 using 1:3 title 'without load-balancer' w linespoints, @file1 using 1:3 title 'global sort' w linespoints, @file2 using 1:3 title 'voronoi' w linespoints
 
@@ -29,5 +30,5 @@ set xlabel 'step'
 set ylabel 'workload per step'
 unset format y
 set yrange [0:]
-set key right center
+set key left center
 plot @file3 using 1:3 title 'without load-balancer' w linespoints, @file4 using 1:3 title 'global sort' w linespoints, @file5 using 1:3 title 'voronoi' w linespoints
