@@ -61,6 +61,11 @@ class PPMD():
         self.debug_flag = debug_flag
 
 
+    ## 試行何回目か
+    def set_trial(self, trial):
+        self.trial = trial
+
+
     ## 実行
     def run(self):
         start = time.time()
@@ -92,9 +97,9 @@ class PPMD():
         for filename in os.listdir("."):
             if '.cdv' in filename:
                 os.remove(filename)
-            elif 'cost_{}.dat'.format(self.sdd_type)==filename:
+            elif 'cost_{}_{}.dat'.format(self.sdd_type, self.trial)==filename:
                 os.remove(filename)
-            elif 'load_balance_{}.dat'.format(self.sdd_type)==filename:
+            elif 'load_balance_{}_{}.dat'.format(self.sdd_type, self.trial)==filename:
                 os.remove(filename)
         ### step 0 情報
         t = 0
@@ -178,11 +183,11 @@ class PPMD():
                 comm_cost += Machine.communicate_particles()
             
             ### このステップでのロードバランスや計算/通信コストを出力
-            envs.export_cost(min(Machine.count()), max(Machine.count()), step+1, 'load_balance_{}.dat'.format(self.sdd_type))
+            envs.export_cost(min(Machine.count()), max(Machine.count()), step+1, 'load_balance_{}_{}.dat'.format(self.sdd_type, self.trial))
             calc_time_ave.append(calc_time)
             comm_cost_ave.append(comm_cost)
             if (step+1) % self.OB_INTERVAL == 0:
-                envs.export_cost(average(calc_time_ave), average(comm_cost_ave), step+1, 'cost_{}.dat'.format(self.sdd_type))
+                envs.export_cost(average(calc_time_ave), average(comm_cost_ave), step+1, 'cost_{}_{}.dat'.format(self.sdd_type, self.trial))
                 calc_time_ave = []
                 comm_cost_ave = []
 
