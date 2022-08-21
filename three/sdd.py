@@ -296,7 +296,7 @@ def voronoi_init(Machine):
             
                 center_line = target_right - target_width*0.5
                 ### 領域の左側は、空だったプロセスに 
-                Machine.procs[i].subregion.set_limit(target_top, center_line, target_bottom, target_left, target_front, target_back)
+                Machine.procs[i].subregion.set_limit(target_top, target_bottom, center_line, target_left, target_front, target_back)
                 ### 領域の右側は、もともといたプロセスに
                 Machine.procs[target_j].subregion.left = center_line
 
