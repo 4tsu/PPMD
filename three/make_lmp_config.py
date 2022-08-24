@@ -30,8 +30,8 @@ def add_droplet(atoms):
 
 # 泡の形を作る
 def add_bubble(atoms, rho):
-    r =  0.16   # シミュレーションボックスの一辺長を0.9としたときの球の半径
-    M = 16             # 格子の数を最初に指定
+    r = 0.16   # シミュレーションボックスの一辺長を0.9としたときの球の半径
+    M = 4             # 格子の数を最初に指定
     s = (0.9/M)**1.0   # 格子間距離のルート2倍
     h = 0.5 * s
     # 周期境界条件により，ぎっちり詰めると端っこ同士がくっついて吹っ飛ぶ
@@ -45,13 +45,17 @@ def add_bubble(atoms, rho):
                 y = iy
                 z = iz
                 if (x**2 + y**2 + z**2 < r**2):   # 原子を球の外側のみに配置するため
-                    iz += 1/M
+                    iz += 0.9/M
                     continue
                 atoms.append(Atom(x, y, z))   # まっすぐに原子を配置
-                atoms.append(Atom(x, y, z+h))
-                atoms.append(Atom(x, y+h, z))
-                atoms.append(Atom(x+h, y, z))
-                atoms.append(Atom(x+h, y+h, z+h))
+                if not z+h > 0.9:
+                    atoms.append(Atom(x, y, z+h))
+                if not y+h > 0.9:
+                    atoms.append(Atom(x, y+h, z))
+                if not x+h > 0.9:
+                    atoms.append(Atom(x+h, y, z))
+                if not (x+h or y+h or z+h) > 0.9:
+                    atoms.append(Atom(x+h, y+h, z+h))
                 iz += 0.9/M
             iy += 0.9/M
         ix += 0.9/M
@@ -133,7 +137,6 @@ def rapid_decomp(atoms, rate, path, output, orgL):
 
 
 
-
 def save_file(filename, atoms, rho):
     # 密度と原子数から系の大きさを決定
     N = len(atoms)
@@ -159,12 +162,13 @@ def save_file(filename, atoms, rho):
 
 atoms = []
 
-rho = 0.08
-add_droplet(atoms)
-save_file("droplet.atoms", atoms, rho)
+# rho = 0.08
+# add_droplet(atoms)
+# save_file("droplet.atoms", atoms, rho)
 
-# add_bubble(atoms, rho)
-# save_file("bubble.atoms", atoms, rho)
+rho = 0.75
+add_bubble(atoms, rho)
+save_file("bubble.atoms", atoms, rho)
 
 # rate = (0.65/0.575)**(1/3)   # 密度の変化を長さの次元に．
 # orgL = 29.320330466373726

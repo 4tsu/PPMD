@@ -3,8 +3,8 @@ units lj
 boundary p p p
 timestep 0.0005
 
-read_data droplet.atoms
-# read_data bubble.atoms
+# read_data droplet.atoms
+read_data bubble.atoms
 
 mass 1 1.0
 pair_style lj/cut 3.5
@@ -16,7 +16,8 @@ thermo 500
 fix 1 all nvt temp 0.40 0.40 $(100.0*dt)
 
 # dump id all atom 500 result.dump
-dump id all custom 100000 droplet.dump id x y z vx vy vz
+# dump id all custom 100000 droplet.dump id x y z vx vy vz
+dump id all custom 100000 bubble.dump id x y z vx vy vz
 
 variable energy equal etotal
 variable temperature equal temp
