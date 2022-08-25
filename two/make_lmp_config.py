@@ -11,8 +11,9 @@ class Atom:
         self.vz = 0.0
 
 # 液滴の配置を作る
-def add_droplet(atoms):
-    r = 20
+def add_droplet(atoms, offset=0):
+    # r = 20
+    r = 16
     s = 3.0   # 原子間距離
     h = 0.5 * s
     for ix in range(-r, r+1):
@@ -22,7 +23,7 @@ def add_droplet(atoms):
             z = 0
             if (x**2 + y**2 + z**2 > r**2):     # 原子を球状に配置するため
                 continue
-            atoms.append(Atom(x, y, z))   # 斜め方向に原子を配置
+            atoms.append(Atom(x+offset, y+offset, z))   # 原子を配置
 
 
 
@@ -154,10 +155,14 @@ atoms = []
 # add_droplet(atoms)
 # save_file("droplet.atoms", atoms, rho)
 
-atoms = []
-rho = 0.7
-add_bubble(atoms, rho)
-save_file("bubble.atoms", atoms, rho)
+# rho = 0.7
+# add_bubble(atoms, rho)
+# save_file("bubble.atoms", atoms, rho)
+
+rho = 0.05
+add_droplet(atoms, offset=-16)
+add_droplet(atoms, offset=16)
+save_file("droplet.atoms", atoms, rho)
 
 # rate = (0.65/0.575)**(1/3)   # 密度の変化を長さの次元に．
 # orgL = 29.320330466373726
