@@ -195,7 +195,7 @@ def make_conf(Machine):
 
 
 ## 初速の大きさだけ受け取って、ランダムな方向に向ける
-def set_initial_velocity(v0, Machine):
+def set_initial_velocity(v0, Machine, xmove=0):
     avx = 0.0
     avy = 0.0
     for i, proc in enumerate(Machine.procs):
@@ -215,6 +215,7 @@ def set_initial_velocity(v0, Machine):
         for j in range(len(proc.subregion.particles)):
             proc.subregion.particles[j].vx -= avx
             proc.subregion.particles[j].vy -= avy
+            proc.subregion.particles[j].vx += xmove
     return Machine
 
 
