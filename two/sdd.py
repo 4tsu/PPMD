@@ -312,7 +312,7 @@ def voronoi_allocate(Machine, bias):
     for i,proc in enumerate(Machine.procs):
         ### 周期境界を考えた、最も近いボロノイ中心点算出
         for j in range(len(proc.subregion.particles)):
-            p = Machine.procs[i].subregion.particles.pop()
+            p = Machine.procs[i].subregion.particles.pop(0)
             r2_np = (p.x - center_np[:,0])**2 + (p.y - center_np[:,1])**2 - bias
             r2_np_xreverse = (xl - abs(p.x - center_np[:,0]))**2 + (p.y - center_np[:,1])**2 - bias
             r2_np_yreverse = (p.x - center_np[:,0])**2 + (yl - abs(p.y - center_np[:,1]))**2 - bias
