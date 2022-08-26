@@ -12,3 +12,5 @@ clean:
 	-rm *.cdv
 	-rm *.dat
 	-rm *.bmp
+	-rm *.png
+	-rm *.gif
