@@ -321,13 +321,17 @@ def read_lammps(Machine, filename):
             y += y_min
             z += z_min
 
+            x = modify(x, x_max, x_min, xl)
+            y = modify(y, y_max, y_min, yl)
+            z = modify(z, z_max, z_min, zl)
+
             p = particle.Particle(int(ids), x, y, z)
             p.set_velocity(float(vxs), float(vys), float(vzs))
 
             Machine.procs[ip].subregion.particles.append(p)
-            assert x_min <= x <= x_max, '初期配置が適切ではありません'
-            assert y_min <= y <= y_max, '初期配置が適切ではありません'
-            assert z_min <= z <= z_max, '初期配置が適切ではありません'
+            assert x_min <= x <= x_max, '初期配置が適切ではありません x={}'.format(x)
+            assert y_min <= y <= y_max, '初期配置が適切ではありません y={}'.format(y)
+            assert z_min <= z <= z_max, '初期配置が適切ではありません z={}'.format(z)
     
     assert max(Machine.count())!=0, '粒子情報が正しく読み込まれていません'
     
