@@ -1,0 +1,9 @@
+*.pyc
+*.cdv
+*.dat
+*.png
+*.dump
+*.lammps
+*.atoms
+*.bmp
+*.gif

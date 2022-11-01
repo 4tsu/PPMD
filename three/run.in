@@ -1,0 +1,27 @@
+atom_style atomic
+units lj
+boundary p p p
+timestep 0.0005
+
+# read_data droplet.atoms
+read_data bubble.atoms
+
+mass 1 1.0
+pair_style lj/cut 3.5
+pair_coeff 1 1 1.0 1.0 3.5
+
+thermo_style custom step etotal temp vol
+thermo 500
+
+fix 1 all nvt temp 0.40 0.40 $(100.0*dt)
+
+# dump id all atom 500 result.dump
+# dump id all custom 100000 droplet.dump id x y z vx vy vz
+dump id all custom 100000 bubble.dump id x y z vx vy vz
+
+variable energy equal etotal
+variable temperature equal temp
+variable volume equal vol
+fix fout1 all ave/time 1 100 100 v_energy v_temperature v_volume file out.dat
+
+run 100000
