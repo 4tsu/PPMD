@@ -113,6 +113,14 @@ def sdd_init(Machine, sdd_num):
         Machine = simple(Machine)   ### 最初は等間隔分割
         Machine = voronoi_init(Machine)   ### 等間隔分割で不具合が出たらカバー
         return voronoimc(Machine)
+    elif sdd_num==3:
+        return rcb(Machine)
+    elif sdd_num==4:
+        Machine = simple(Machine)
+        return one_d_parallel(Machine)
+    elif sdd_num==6:
+        Machine = simple(Machine)
+        return skew_boundary(Machine)
 
 
 
@@ -123,6 +131,12 @@ def sdd(Machine, sdd_num):
         return xybin(Machine)
     elif sdd_num==2:
         return voronoimc(Machine)
+    elif sdd_num==3:
+        return rcb(Machine)
+    elif sdd_num==4:
+        return one_d_parallel(Machine)
+    elif sdd_num==5:
+        return skew_boundary(Machine)
 
 
 
@@ -506,5 +520,92 @@ def ideal(data, cell):
     N = cell[0]*cell[1]
     icount = len(data[0])/N
     return icount
+
+
+
+# Recursive Coordinate Bisectioning
+def rcb(Machine):
+    method_type_name = "rcb"
+
+    Machine.procs[0].subregion.top    = Machine.procs[0].Box.y_max
+    Machine.procs[0].subregion.bottom = Machine.procs[0].Box.y_min
+    Machine.procs[0].subregion.right  = Machine.procs[0].Box.x_max
+    Machine.procs[0].subregion.left   = Machine.procs[0].Box.x_min
+    for i in range(1,Machine.np):
+        Machine.procs[0].subregion.particles += Machine.procs[i].subregion.particles
+        Machine.procs[i].subregion.particles.clear()
+    plot_fig(Machine, -1, method_type_name)
+
+    directions = ["x" for _ in range(Machine.np)]
+    number_of_particles = Machine.procs[0].Box.N
+    for i in range(1,Machine.np):
+        counts_np = np.array(Machine.count())
+        target_j = np.argmax(counts_np)
+        datalist = []
+        for p in Machine.procs[target_j].subregion.particles:
+            datalist.append([p.id, p.x, p.y, p.vx, p.vy])
+        target_data = np.array(datalist)
+
+        # 分割の方向はタテヨコ交互に
+        sorted_index = np.argsort(target_data, axis=0)
+        hi = counts_np[target_j]//2
+        ## ヨコのとき
+        if directions[target_j] == "x":
+            border = (target_data[sorted_index[hi,1],1] + target_data[sorted_index[hi+1,1],1])/2
+
+            ### 領域の左側は、空だったプロセスに
+            Machine.procs[i].subregion.top    = Machine.procs[target_j].subregion.top
+            Machine.procs[i].subregion.bottom = Machine.procs[target_j].subregion.bottom
+            Machine.procs[i].subregion.right  = border
+            Machine.procs[i].subregion.left   = Machine.procs[target_j].subregion.left
+            for jp in range(hi):
+                Machine.procs[i].subregion.particles.append(Machine.procs[target_j].subregion.particles[sorted_index[jp,1]])
+            ### 領域の右側は、もともとのプロセスに
+            Machine.procs[target_j].subregion.left = border
+            new_target_particles = []
+            for jp in range(hi, len(target_data)):
+                new_target_particles.append(Machine.procs[target_j].subregion.particles[sorted_index[jp,1]])
+            Machine.procs[target_j].subregion.particles.clear()
+            Machine.procs[target_j].subregion.particles = new_target_particles
+
+            directions[target_j] = "y"
+            directions[i] = "y"
+        ## タテのとき
+        else:
+            border = (target_data[sorted_index[hi,2],2] + target_data[sorted_index[hi+1,2],2])
+
+            ### 領域の上側は、空だったプロセスに
+            Machine.procs[i].subregion.top    = Machine.procs[target_j].subregion.top
+            Machine.procs[i].subregion.bottom = border
+            Machine.procs[i].subregion.right  = Machine.procs[target_j].subregion.right
+            Machine.procs[i].subregion.left   = Machine.procs[target_j].subregion.left
+            for jp in range(hi):
+                Machine.procs[i].subregion.particles.append(Machine.procs[target_j].subregion.particles[sorted_index[jp,2]])
+            ### 領域の下側は、もともとのプロセスに
+            Machine.procs[target_j].subregion.top = border
+            new_target_particles = []
+            for jp in range(hi, len(target_data)):
+                new_target_particles.append(Machine.procs[target_j].subregion.particles[sorted_index[jp,2]])
+            Machine.procs[target_j].subregion.particles.clear()
+            Machine.procs[target_j].subregion.particles = new_target_particles
+
+            directions[target_j] = "x"
+            directions[i] = "x"
+
+        assert(number_of_particles == sum(Machine.count()))
+        plot_fig(Machine, i-1, method_type_name)
+
+    return Machine
+
+
+def one_d_parallel(Machine):
+    for i,proc in enumerate(Machine.procs):
+        pass
+
+
+
+def skew_boundary(Machine):
+    for i,proc in enumerate(Machine.procs):
+        pass
 
 # ========================================================================================
