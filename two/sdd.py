@@ -12,7 +12,7 @@ from matplotlib.pyplot import axis
 import numpy as np
 from numpy.lib.function_base import average
 from numba import jit
-from math import ceil
+from math import ceil, floor
 
 # --------------------------------------------------------------------------------------------------------------------------------
 
@@ -118,7 +118,7 @@ def sdd_init(Machine, sdd_num):
     elif sdd_num==4:
         Machine = odp_init(Machine)
         return one_d_parallel(Machine)
-    elif sdd_num==6:
+    elif sdd_num==5:
         Machine = simple(Machine)
         return skew_boundary(Machine)
 
@@ -678,32 +678,24 @@ def one_d_parallel(Machine, iteration=300, alpha=0.030, early_stop_range=0.02):
 
 
 
-def skew_boundary(Machine, iteration=300, alpha=0.030, early_stop_range=0.02):
+def skew_boundary(Machine, iteration=300, alpha=0.050, early_stop_range=0.02):
     method_type_name = "skew_boundary"
     print("Iteration =", iteration)
-    num_cell = Machine.np
     box = Machine.procs[0].Box
-    # 初期分割
-    lxp = box.xl/num_cell
-    bn = box.y_max
-    bs = box.y_min
-    migration_particles = [[] for _ in range(Machine.np)]
+    # 初期分割は等間隔
+    Machine = simple(Machine)
+    # ただし、境界の定義だけ変更する
     for i in range(Machine.np):
-        bw = i*lxp + box.x_min
-        be = (i+1)*lxp + box.x_min
-        Machine.procs[i].subregion.top    = bn
-        Machine.procs[i].subregion.bottom = bs
-        Machine.procs[i].subregion.left   = bw
-        Machine.procs[i].subregion.right  = be
-        for p in Machine.procs[i].subregion.particles:
-            migration_particles[int((p.x-box.x_min)/lxp)].append(p)
-    for i in range(Machine.np):
-        Machine.procs[i].subregion.particles.clear()
-        Machine.procs[i].subregion.particles = migration_particles[i]
+        ipy = i//box.xn
+        Machine.procs[i].subregion.top    = box.y_max
+        Machine.procs[i].subregion.bottom = box.y_min
+        Machine.procs[i].subregion.left  += ipy*box.xl - box.x_min
+        Machine.procs[i].subregion.right += ipy*box.xl - box.x_min
     assert(sum(Machine.count()) == box.N)
     plot_fig(Machine, -1, method_type_name)
     print("step", 0, "count", Machine.count())
 
+    box = Machine.procs[0].Box
     ideal_count_max = ceil(average(Machine.count())*(1+early_stop_range))
     for s in range(iteration):
         counts = Machine.count()
@@ -721,9 +713,10 @@ def skew_boundary(Machine, iteration=300, alpha=0.030, early_stop_range=0.02):
 
             i_particles = []
             for p in Machine.procs[i].subregion.particles:
-                if p.x < Machine.procs[i].subregion.left:
+                sbx = floor((p.y-box.x_min)/box.sd_yl)*box.xl + p.x - box.x_min
+                if sbx < Machine.procs[i].subregion.left:
                     Machine.procs[i-1].subregion.particles.append(p)
-                elif p.x > Machine.procs[i].subregion.right:
+                elif sbx > Machine.procs[i].subregion.right:
                     Machine.procs[i+1].subregion.particles.append(p)
                 else:
                     i_particles.append(p)
@@ -732,7 +725,8 @@ def skew_boundary(Machine, iteration=300, alpha=0.030, early_stop_range=0.02):
  
         last_particles = []
         for p in Machine.procs[Machine.np-1].subregion.particles:
-            if p.x < Machine.procs[Machine.np-1].subregion.left:
+            sbx = floor((p.y-box.x_min)/box.sd_yl)*box.xl + p.x - box.x_min
+            if sbx < Machine.procs[Machine.np-1].subregion.left:
                 Machine.procs[Machine.np-2].subregion.particles.append(p)
             else:
                 last_particles.append(p)
@@ -749,10 +743,5 @@ def skew_boundary(Machine, iteration=300, alpha=0.030, early_stop_range=0.02):
 
     return Machine
 
-
-
-def skew_boundary(Machine):
-    for i,proc in enumerate(Machine.procs):
-        pass
 
 # ========================================================================================
