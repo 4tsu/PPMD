@@ -116,7 +116,7 @@ def sdd_init(Machine, sdd_num):
     elif sdd_num==3:
         return rcb(Machine)
     elif sdd_num==4:
-        Machine = simple(Machine)
+        Machine = odp_init(Machine)
         return one_d_parallel(Machine)
     elif sdd_num==6:
         Machine = simple(Machine)
@@ -598,8 +598,88 @@ def rcb(Machine):
     return Machine
 
 
+
+def odp_init(Machine):
+    num_cell = Machine.np
+    box = Machine.procs[0].Box
+    # 初期分割
+    lxp = box.xl/num_cell
+    bn = box.y_max
+    bs = box.y_min
+    migration_particles = [[] for _ in range(Machine.np)]
+    for i in range(Machine.np):
+        bw = i*lxp + box.x_min
+        be = (i+1)*lxp + box.x_min
+        Machine.procs[i].subregion.top    = bn
+        Machine.procs[i].subregion.bottom = bs
+        Machine.procs[i].subregion.left   = bw
+        Machine.procs[i].subregion.right  = be
+        for p in Machine.procs[i].subregion.particles:
+            migration_particles[int((p.x-box.x_min)/lxp)].append(p)
+    for i in range(Machine.np):
+        Machine.procs[i].subregion.particles.clear()
+        Machine.procs[i].subregion.particles = migration_particles[i]
+    assert(sum(Machine.count()) == box.N)
+    return Machine
+
+
+
 def one_d_parallel(Machine, iteration=300, alpha=0.030, early_stop_range=0.02):
     method_type_name = "one_d_parallel"
+    print("Iteration =", iteration)
+    box = Machine.procs[0].Box
+    plot_fig(Machine, -1, method_type_name)
+    print("step", 0, "count", Machine.count())
+
+    ideal_count_max = ceil(average(Machine.count())*(1+early_stop_range))
+    for s in range(iteration):
+        counts = Machine.count()
+        for i in range(Machine.np-1):
+            dx = alpha*(counts[i] - counts[i+1])
+            Machine.procs[i].subregion.right  -= dx
+            Machine.procs[i+1].subregion.left -= dx
+
+            if Machine.procs[i].subregion.right < Machine.procs[i].subregion.left:
+                Machine.procs[i].subregion.right = Machine.procs[i].subregion.left
+                Machine.procs[i+1].subregion.left = Machine.procs[i].subregion.left
+            elif Machine.procs[i].subregion.right > Machine.procs[i+1].subregion.right:
+                Machine.procs[i].subregion.right = Machine.procs[i+1].subregion.right
+                Machine.procs[i+1].subregion.left = Machine.procs[i+1].subregion.right
+
+            i_particles = []
+            for p in Machine.procs[i].subregion.particles:
+                if p.x < Machine.procs[i].subregion.left:
+                    Machine.procs[i-1].subregion.particles.append(p)
+                elif p.x > Machine.procs[i].subregion.right:
+                    Machine.procs[i+1].subregion.particles.append(p)
+                else:
+                    i_particles.append(p)
+            Machine.procs[i].subregion.particles.clear()
+            Machine.procs[i].subregion.particles = i_particles
+ 
+        last_particles = []
+        for p in Machine.procs[Machine.np-1].subregion.particles:
+            if p.x < Machine.procs[Machine.np-1].subregion.left:
+                Machine.procs[Machine.np-2].subregion.particles.append(p)
+            else:
+                last_particles.append(p)
+        Machine.procs[Machine.np-1].subregion.particles.clear()
+        Machine.procs[Machine.np-1].subregion.particles = last_particles
+
+        print('step', s+1, 'count', Machine.count())
+        assert(box.N == sum(Machine.count()))
+        if (s+1)%2 == 0:
+            plot_fig(Machine, s, method_type_name)
+    
+        if max(Machine.count()) <= ideal_count_max:
+            break
+
+    return Machine
+
+
+
+def skew_boundary(Machine, iteration=300, alpha=0.030, early_stop_range=0.02):
+    method_type_name = "skew_boundary"
     print("Iteration =", iteration)
     num_cell = Machine.np
     box = Machine.procs[0].Box
