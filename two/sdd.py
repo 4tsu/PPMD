@@ -119,7 +119,7 @@ def sdd_init(Machine, sdd_num):
         Machine = odp_init(Machine)
         return one_d_parallel(Machine)
     elif sdd_num==5:
-        Machine = simple(Machine)
+        Machine = sb_init(Machine)
         return skew_boundary(Machine)
 
 
@@ -671,9 +671,7 @@ def one_d_parallel(Machine, iteration=300, alpha=0.030, early_stop_range=0.02):
 
 
 
-def skew_boundary(Machine, iteration=300, alpha=0.050, early_stop_range=0.02):
-    method_type_name = "skew_boundary"
-    print("Iteration =", iteration)
+def sb_init(Machine):
     box = Machine.procs[0].Box
     # 初期分割は等間隔
     Machine = simple(Machine)
@@ -685,10 +683,20 @@ def skew_boundary(Machine, iteration=300, alpha=0.050, early_stop_range=0.02):
         Machine.procs[i].subregion.left  += ipy*box.xl - box.x_min
         Machine.procs[i].subregion.right += ipy*box.xl - box.x_min
     assert(sum(Machine.count()) == box.N)
+
+    return Machine
+
+
+
+def skew_boundary(Machine, iteration=300, alpha=0.050, early_stop_range=0.02):
+    method_type_name = "skew_boundary"
+    print("Iteration =", iteration)
+    box = Machine.procs[0].Box
+    
+    assert(sum(Machine.count()) == box.N)
     plot_fig(Machine, -1, method_type_name)
     print("step", 0, "count", Machine.count())
 
-    box = Machine.procs[0].Box
     ideal_count_max = ceil(average(Machine.count())*(1+early_stop_range))
     for s in range(iteration):
         counts = Machine.count()
