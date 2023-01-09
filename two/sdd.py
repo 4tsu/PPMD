@@ -527,7 +527,7 @@ def rcb(Machine):
     for i in range(1,Machine.np):
         Machine.procs[0].subregion.particles += Machine.procs[i].subregion.particles
         Machine.procs[i].subregion.particles.clear()
-    plot_fig(Machine, -1, method_type_name)
+    # plot_fig(Machine, -1, method_type_name)
 
     directions = ["x" for _ in range(Machine.np)]
     number_of_particles = Machine.procs[0].Box.N
@@ -586,7 +586,7 @@ def rcb(Machine):
             directions[i] = "x"
 
         assert(number_of_particles == sum(Machine.count()))
-        plot_fig(Machine, i-1, method_type_name)
+        # plot_fig(Machine, i-1, method_type_name)
 
     return Machine
 
@@ -621,14 +621,14 @@ def one_d_parallel(Machine, iteration=300, alpha=0.030, early_stop_range=0.02):
     method_type_name = "one_d_parallel"
     print("Iteration =", iteration)
     box = Machine.procs[0].Box
-    plot_fig(Machine, -1, method_type_name)
-    print("step", 0, "count", Machine.count())
+    # plot_fig(Machine, -1, method_type_name)
+    # print("step", 0, "count", Machine.count())
 
     ideal_count_max = ceil(average(Machine.count())*(1+early_stop_range))
     for s in range(iteration):
         counts = Machine.count()
         for i in range(Machine.np-1):
-            dx = alpha*(counts[i] - counts[i+1])
+            dx = alpha*(counts[i] - counts[i+1])**1
             Machine.procs[i].subregion.right  -= dx
             Machine.procs[i+1].subregion.left -= dx
 
@@ -659,11 +659,13 @@ def one_d_parallel(Machine, iteration=300, alpha=0.030, early_stop_range=0.02):
         Machine.procs[Machine.np-1].subregion.particles.clear()
         Machine.procs[Machine.np-1].subregion.particles = last_particles
 
-        print('step', s+1, 'count', Machine.count())
-        assert(box.N == sum(Machine.count()))
-        if (s+1)%2 == 0:
+        """
+        if (s+1)%5 == 0:
+            print('step', s+1, 'count', Machine.count())
             plot_fig(Machine, s, method_type_name)
+        """
     
+        assert(box.N == sum(Machine.count()))
         if max(Machine.count()) <= ideal_count_max:
             break
 
@@ -688,20 +690,20 @@ def sb_init(Machine):
 
 
 
-def skew_boundary(Machine, iteration=300, alpha=0.050, early_stop_range=0.02):
+def skew_boundary(Machine, iteration=500, alpha=0.015, early_stop_range=0.02):
     method_type_name = "skew_boundary"
     print("Iteration =", iteration)
     box = Machine.procs[0].Box
     
     assert(sum(Machine.count()) == box.N)
-    plot_fig(Machine, -1, method_type_name)
-    print("step", 0, "count", Machine.count())
+    # plot_fig(Machine, -1, method_type_name)
+    # print("step", 0, "count", Machine.count())
 
     ideal_count_max = ceil(average(Machine.count())*(1+early_stop_range))
     for s in range(iteration):
         counts = Machine.count()
         for i in range(Machine.np-1):
-            dx = alpha*(counts[i] - counts[i+1])
+            dx = (alpha*(counts[i] - counts[i+1]))**3
             Machine.procs[i].subregion.right  -= dx
             Machine.procs[i+1].subregion.left -= dx
 
@@ -734,11 +736,13 @@ def skew_boundary(Machine, iteration=300, alpha=0.050, early_stop_range=0.02):
         Machine.procs[Machine.np-1].subregion.particles.clear()
         Machine.procs[Machine.np-1].subregion.particles = last_particles
 
-        print('step', s+1, 'count', Machine.count())
-        assert(box.N == sum(Machine.count()))
-        if (s+1)%2 == 0:
+        """
+        if (s+1)%5 == 0:
+            print('step', s+1, 'count', Machine.count())
             plot_fig(Machine, s, method_type_name)
+        """
     
+        assert(box.N == sum(Machine.count()))
         if max(Machine.count()) <= ideal_count_max:
             break
 
