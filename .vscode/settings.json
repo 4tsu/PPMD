@@ -4,9 +4,11 @@
         "iproc",
         "Koradi",
         "numy",
+        "numz",
         "pdata",
         "pmem",
         "ppmd",
-        "voronoimc"
+        "voronoimc",
+        "xyzn"
     ]
 }

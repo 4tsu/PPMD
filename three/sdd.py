@@ -91,7 +91,7 @@ class subregion:
         self.radius = r_max
 
     def calc_perimeter(self):
-        prmtr = 0
+        perimeter = 0
         C = []
         B = self.boundaries
         for j in range(len(B)):
@@ -105,8 +105,8 @@ class subregion:
             y = (c1*a2 - c2*a1) / (a1*b2 - a2*b1)
             C.append([x, y])
         for j in range(len(C)):
-            prmtr += ((C[j][0]-C[j-1][0])**2 + (C[j][1]-C[j-1][1])**2)**0.5
-        self.perimeter = prmtr
+            perimeter += ((C[j][0]-C[j-1][0])**2 + (C[j][1]-C[j-1][1])**2)**0.5
+        self.perimeter = perimeter
 
     def set_limit(self, top, bottom, right, left, front, back):
         self.top    = top
@@ -125,7 +125,7 @@ def sdd_init(Machine, sdd_num):
     if sdd_num==0:
         return Machine
     elif sdd_num==1:
-        return xybin(Machine)
+        return global_sort(Machine)
     elif sdd_num==2:
         Machine = simple(Machine)   ### 最初は等間隔分割
         Machine = voronoi_init(Machine)   ### 等間隔分割で不具合が出たらカバー
@@ -137,7 +137,7 @@ def sdd(Machine, sdd_num):
     if sdd_num==0:
         return simple(Machine)
     elif sdd_num==1:
-        return xybin(Machine)
+        return global_sort(Machine)
     elif sdd_num==2:
         return voronoimc(Machine)
 
@@ -204,7 +204,7 @@ def simple(Machine):
 
 
 
-def xybin(Machine):
+def global_sort(Machine):
     ### 準備
     datalist = []
     for proc in Machine.procs:
@@ -340,41 +340,41 @@ def voronoi_allocate(Machine, bias):
 
             r2_np = (p.x - center_np[:,0])**2 + (p.y - center_np[:,1])**2 + (p.z - center_np[:,2])**2 - bias
 
-            r2_np_xreverse = (xl - abs(p.x - center_np[:,0]))**2 + (p.y - center_np[:,1])**2 + (p.z - center_np[:,2])**2 - bias
-            r2_np_yreverse = (p.x - center_np[:,0])**2 + (yl - abs(p.y - center_np[:,1]))**2 + (p.z - center_np[:,2])**2 - bias
-            r2_np_zreverse = (p.x - center_np[:,0])**2 + (p.y - center_np[:,1])**2 + (zl - abs(p.z - center_np[:,2]))**2 - bias
+            r2_np_x_reverse = (xl - abs(p.x - center_np[:,0]))**2 + (p.y - center_np[:,1])**2 + (p.z - center_np[:,2])**2 - bias
+            r2_np_y_reverse = (p.x - center_np[:,0])**2 + (yl - abs(p.y - center_np[:,1]))**2 + (p.z - center_np[:,2])**2 - bias
+            r2_np_z_reverse = (p.x - center_np[:,0])**2 + (p.y - center_np[:,1])**2 + (zl - abs(p.z - center_np[:,2]))**2 - bias
 
-            r2_np_xyreverse = (xl - abs(p.x - center_np[:,0]))**2 + (yl - abs(p.y - center_np[:,0]))**2 + (p.z - center_np[:,2])**2 - bias
-            r2_np_yzreverse = (p.x - center_np[:,0])**2 + (yl - abs(p.y - center_np[:,0]))**2 + (zl - abs(p.z - center_np[:,2]))**2 - bias
-            r2_np_zxreverse = (xl - abs(p.x - center_np[:,0]))**2 + (p.y - center_np[:,0])**2 + (zl - abs(p.z - center_np[:,2]))**2 - bias
+            r2_np_xy_reverse = (xl - abs(p.x - center_np[:,0]))**2 + (yl - abs(p.y - center_np[:,0]))**2 + (p.z - center_np[:,2])**2 - bias
+            r2_np_yz_reverse = (p.x - center_np[:,0])**2 + (yl - abs(p.y - center_np[:,0]))**2 + (zl - abs(p.z - center_np[:,2]))**2 - bias
+            r2_np_zx_reverse = (xl - abs(p.x - center_np[:,0]))**2 + (p.y - center_np[:,0])**2 + (zl - abs(p.z - center_np[:,2]))**2 - bias
             
-            r2_np_xyzreverse = (xl - abs(p.x - center_np[:,0]))**2 + (yl - abs(p.y - center_np[:,0]))**2 + (zl - abs(p.z - center_np[:,2]))**2 - bias
-            minimums = np.array([r2_np.min(), r2_np_xreverse.min(), r2_np_yreverse.min(), r2_np_zreverse.min(), r2_np_xyreverse.min(), r2_np_yzreverse.min(), r2_np_zxreverse.min(), r2_np_xyzreverse.min()])
+            r2_np_xyz_reverse = (xl - abs(p.x - center_np[:,0]))**2 + (yl - abs(p.y - center_np[:,0]))**2 + (zl - abs(p.z - center_np[:,2]))**2 - bias
+            minimums = np.array([r2_np.min(), r2_np_x_reverse.min(), r2_np_y_reverse.min(), r2_np_z_reverse.min(), r2_np_xy_reverse.min(), r2_np_yz_reverse.min(), r2_np_zx_reverse.min(), r2_np_xyz_reverse.min()])
 
             ### シミュレーションボックスの境界をまたがない
             if np.argmin(minimums) == 0:
                 Machine.procs[np.argmin(r2_np)].subregion.particles.append(p)
             ### x方向はまたぐ
             elif np.argmin(minimums) == 1:
-                Machine.procs[np.argmin(r2_np_xreverse)].subregion.particles.append(p)
+                Machine.procs[np.argmin(r2_np_x_reverse)].subregion.particles.append(p)
             ### y方向はまたぐ
             elif np.argmin(minimums) == 2:
-                Machine.procs[np.argmin(r2_np_yreverse)].subregion.particles.append(p)
+                Machine.procs[np.argmin(r2_np_y_reverse)].subregion.particles.append(p)
             ### z方向はまたぐ
             elif np.argmin(minimums) == 3:
-                Machine.procs[np.argmin(r2_np_zreverse)].subregion.particles.append(p)
+                Machine.procs[np.argmin(r2_np_z_reverse)].subregion.particles.append(p)
             ### xyともにまたぐ
             elif np.argmin(minimums) == 4:
-                Machine.procs[np.argmin(r2_np_xyreverse)].subregion.particles.append(p)
+                Machine.procs[np.argmin(r2_np_xy_reverse)].subregion.particles.append(p)
             ### yzともにまたぐ
             elif np.argmin(minimums) == 5:
-                Machine.procs[np.argmin(r2_np_yzreverse)].subregion.particles.append(p)
+                Machine.procs[np.argmin(r2_np_yz_reverse)].subregion.particles.append(p)
             ### xzともにまたぐ
             elif np.argmin(minimums) == 6:
-                Machine.procs[np.argmin(r2_np_zxreverse)].subregion.particles.append(p)
+                Machine.procs[np.argmin(r2_np_zx_reverse)].subregion.particles.append(p)
             ### xyzずべてまたぐ
             else:
-                Machine.procs[np.argmin(r2_np_xyzreverse)].subregion.particles.append(p)
+                Machine.procs[np.argmin(r2_np_xyz_reverse)].subregion.particles.append(p)
 
     return Machine
 
@@ -538,17 +538,11 @@ def plot_fig(Machine, s, method_type_name):
     plt.xticks([])
     plt.yticks([])
     ax.set_aspect('equal')
-    fgnm = "{}_iteration#{:0=3}.png".format(method_type_name, s+1)
-    plt.title(fgnm)
-    plt.savefig(fgnm)
+    figname = "{}_iteration#{:0=3}.png".format(method_type_name, s+1)
+    plt.title(figname)
+    plt.savefig(figname)
     # plt.show()
     plt.close()
 
-
-
-def ideal(data, cell):
-    N = cell[0]*cell[1]
-    icount = len(data[0])/N
-    return icount
 
 # ========================================================================================
