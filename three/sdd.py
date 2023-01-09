@@ -130,6 +130,14 @@ def sdd_init(Machine, sdd_num):
         Machine = simple(Machine)   ### 最初は等間隔分割
         Machine = voronoi_init(Machine)   ### 等間隔分割で不具合が出たらカバー
         return voronoimc(Machine)
+    elif sdd_num==3:
+        return rcb(Machine)
+    elif sdd_num==4:
+        Machine = odp_init(Machine)
+        return one_d_parallel(Machine)
+    elif sdd_num==5:
+        Machine = sb_init(Machine)
+        return skew_boundary(Machine)
 
 
 
@@ -140,6 +148,12 @@ def sdd(Machine, sdd_num):
         return global_sort(Machine)
     elif sdd_num==2:
         return voronoimc(Machine)
+    elif sdd_num==3:
+        return rcb(Machine)
+    elif sdd_num==4:
+        return one_d_parallel(Machine)
+    elif sdd_num==5:
+        return skew_boundary(Machine)
 
 
 
