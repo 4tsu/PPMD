@@ -714,7 +714,7 @@ def skew_boundary(Machine, iteration=300, alpha=0.050, early_stop_range=0.02):
 
             i_particles = []
             for p in Machine.procs[i].subregion.particles:
-                sbx = floor((p.y-box.x_min)/box.sd_yl)*box.xl + p.x - box.x_min
+                sbx = floor((p.y-box.y_min)/box.sd_yl)*box.xl + p.x - box.x_min
                 if sbx < Machine.procs[i].subregion.left:
                     Machine.procs[i-1].subregion.particles.append(p)
                 elif sbx > Machine.procs[i].subregion.right:
@@ -726,7 +726,7 @@ def skew_boundary(Machine, iteration=300, alpha=0.050, early_stop_range=0.02):
  
         last_particles = []
         for p in Machine.procs[Machine.np-1].subregion.particles:
-            sbx = floor((p.y-box.x_min)/box.sd_yl)*box.xl + p.x - box.x_min
+            sbx = floor((p.y-box.y_min)/box.sd_yl)*box.xl + p.x - box.x_min
             if sbx < Machine.procs[Machine.np-1].subregion.left:
                 Machine.procs[Machine.np-2].subregion.particles.append(p)
             else:
