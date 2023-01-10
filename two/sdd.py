@@ -13,6 +13,7 @@ import numpy as np
 from numpy.lib.function_base import average
 from numba import jit
 from math import ceil, floor
+import sys
 
 # --------------------------------------------------------------------------------------------------------------------------------
 
@@ -617,9 +618,9 @@ def odp_init(Machine):
 
 
 
-def one_d_parallel(Machine, iteration=300, alpha=0.030, early_stop_range=0.02):
+def one_d_parallel(Machine, iteration=300, alpha=0.003, early_stop_range=0.02):
     method_type_name = "one_d_parallel"
-    print("Iteration =", iteration)
+    print(method_type_name, "Iteration =", iteration, file=sys.stderr)
     box = Machine.procs[0].Box
     # plot_fig(Machine, -1, method_type_name)
     # print("step", 0, "count", Machine.count())
@@ -632,12 +633,15 @@ def one_d_parallel(Machine, iteration=300, alpha=0.030, early_stop_range=0.02):
             Machine.procs[i].subregion.right  -= dx
             Machine.procs[i+1].subregion.left -= dx
 
-            if Machine.procs[i].subregion.right < Machine.procs[i].subregion.left:
-                Machine.procs[i].subregion.right = Machine.procs[i].subregion.left
-                Machine.procs[i+1].subregion.left = Machine.procs[i].subregion.left
-            elif Machine.procs[i].subregion.right > Machine.procs[i+1].subregion.right:
-                Machine.procs[i].subregion.right = Machine.procs[i+1].subregion.right
-                Machine.procs[i+1].subregion.left = Machine.procs[i+1].subregion.right
+            left_limit  = (Machine.procs[i].subregion.left + Machine.procs[i].subregion.right)/2
+            right_limit = (Machine.procs[i+1].subregion.left + Machine.procs[i+1].subregion.right)/2
+
+            if Machine.procs[i].subregion.right < left_limit:
+                Machine.procs[i].subregion.right = left_limit 
+                Machine.procs[i+1].subregion.left = left_limit
+            elif Machine.procs[i].subregion.right > right_limit:
+                Machine.procs[i].subregion.right = right_limit
+                Machine.procs[i+1].subregion.left = right_limit
 
             i_particles = []
             for p in Machine.procs[i].subregion.particles:
