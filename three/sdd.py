@@ -12,7 +12,7 @@ from matplotlib.pyplot import axis
 import numpy as np
 from numpy.lib.function_base import average
 from numba import jit
-from math import ceil
+from math import ceil, floor
 
 # --------------------------------------------------------------------------------------------------------------------------------
 
@@ -91,7 +91,7 @@ class subregion:
         self.radius = r_max
 
     def calc_perimeter(self):
-        prmtr = 0
+        perimeter = 0
         C = []
         B = self.boundaries
         for j in range(len(B)):
@@ -105,8 +105,8 @@ class subregion:
             y = (c1*a2 - c2*a1) / (a1*b2 - a2*b1)
             C.append([x, y])
         for j in range(len(C)):
-            prmtr += ((C[j][0]-C[j-1][0])**2 + (C[j][1]-C[j-1][1])**2)**0.5
-        self.perimeter = prmtr
+            perimeter += ((C[j][0]-C[j-1][0])**2 + (C[j][1]-C[j-1][1])**2)**0.5
+        self.perimeter = perimeter
 
     def set_limit(self, top, bottom, right, left, front, back):
         self.top    = top
@@ -125,11 +125,19 @@ def sdd_init(Machine, sdd_num):
     if sdd_num==0:
         return Machine
     elif sdd_num==1:
-        return xybin(Machine)
+        return global_sort(Machine)
     elif sdd_num==2:
         Machine = simple(Machine)   ### 最初は等間隔分割
         Machine = voronoi_init(Machine)   ### 等間隔分割で不具合が出たらカバー
         return voronoimc(Machine)
+    elif sdd_num==3:
+        return rcb(Machine)
+    elif sdd_num==4:
+        Machine = odp_init(Machine)
+        return one_d_parallel(Machine)
+    elif sdd_num==5:
+        Machine = sb_init(Machine)
+        return skew_boundary(Machine)
 
 
 
@@ -137,9 +145,15 @@ def sdd(Machine, sdd_num):
     if sdd_num==0:
         return simple(Machine)
     elif sdd_num==1:
-        return xybin(Machine)
+        return global_sort(Machine)
     elif sdd_num==2:
         return voronoimc(Machine)
+    elif sdd_num==3:
+        return rcb(Machine)
+    elif sdd_num==4:
+        return one_d_parallel(Machine)
+    elif sdd_num==5:
+        return skew_boundary(Machine)
 
 
 
@@ -204,7 +218,7 @@ def simple(Machine):
 
 
 
-def xybin(Machine):
+def global_sort(Machine):
     ### 準備
     datalist = []
     for proc in Machine.procs:
@@ -340,41 +354,41 @@ def voronoi_allocate(Machine, bias):
 
             r2_np = (p.x - center_np[:,0])**2 + (p.y - center_np[:,1])**2 + (p.z - center_np[:,2])**2 - bias
 
-            r2_np_xreverse = (xl - abs(p.x - center_np[:,0]))**2 + (p.y - center_np[:,1])**2 + (p.z - center_np[:,2])**2 - bias
-            r2_np_yreverse = (p.x - center_np[:,0])**2 + (yl - abs(p.y - center_np[:,1]))**2 + (p.z - center_np[:,2])**2 - bias
-            r2_np_zreverse = (p.x - center_np[:,0])**2 + (p.y - center_np[:,1])**2 + (zl - abs(p.z - center_np[:,2]))**2 - bias
+            r2_np_x_reverse = (xl - abs(p.x - center_np[:,0]))**2 + (p.y - center_np[:,1])**2 + (p.z - center_np[:,2])**2 - bias
+            r2_np_y_reverse = (p.x - center_np[:,0])**2 + (yl - abs(p.y - center_np[:,1]))**2 + (p.z - center_np[:,2])**2 - bias
+            r2_np_z_reverse = (p.x - center_np[:,0])**2 + (p.y - center_np[:,1])**2 + (zl - abs(p.z - center_np[:,2]))**2 - bias
 
-            r2_np_xyreverse = (xl - abs(p.x - center_np[:,0]))**2 + (yl - abs(p.y - center_np[:,0]))**2 + (p.z - center_np[:,2])**2 - bias
-            r2_np_yzreverse = (p.x - center_np[:,0])**2 + (yl - abs(p.y - center_np[:,0]))**2 + (zl - abs(p.z - center_np[:,2]))**2 - bias
-            r2_np_zxreverse = (xl - abs(p.x - center_np[:,0]))**2 + (p.y - center_np[:,0])**2 + (zl - abs(p.z - center_np[:,2]))**2 - bias
+            r2_np_xy_reverse = (xl - abs(p.x - center_np[:,0]))**2 + (yl - abs(p.y - center_np[:,0]))**2 + (p.z - center_np[:,2])**2 - bias
+            r2_np_yz_reverse = (p.x - center_np[:,0])**2 + (yl - abs(p.y - center_np[:,0]))**2 + (zl - abs(p.z - center_np[:,2]))**2 - bias
+            r2_np_zx_reverse = (xl - abs(p.x - center_np[:,0]))**2 + (p.y - center_np[:,0])**2 + (zl - abs(p.z - center_np[:,2]))**2 - bias
             
-            r2_np_xyzreverse = (xl - abs(p.x - center_np[:,0]))**2 + (yl - abs(p.y - center_np[:,0]))**2 + (zl - abs(p.z - center_np[:,2]))**2 - bias
-            minimums = np.array([r2_np.min(), r2_np_xreverse.min(), r2_np_yreverse.min(), r2_np_zreverse.min(), r2_np_xyreverse.min(), r2_np_yzreverse.min(), r2_np_zxreverse.min(), r2_np_xyzreverse.min()])
+            r2_np_xyz_reverse = (xl - abs(p.x - center_np[:,0]))**2 + (yl - abs(p.y - center_np[:,0]))**2 + (zl - abs(p.z - center_np[:,2]))**2 - bias
+            minimums = np.array([r2_np.min(), r2_np_x_reverse.min(), r2_np_y_reverse.min(), r2_np_z_reverse.min(), r2_np_xy_reverse.min(), r2_np_yz_reverse.min(), r2_np_zx_reverse.min(), r2_np_xyz_reverse.min()])
 
             ### シミュレーションボックスの境界をまたがない
             if np.argmin(minimums) == 0:
                 Machine.procs[np.argmin(r2_np)].subregion.particles.append(p)
             ### x方向はまたぐ
             elif np.argmin(minimums) == 1:
-                Machine.procs[np.argmin(r2_np_xreverse)].subregion.particles.append(p)
+                Machine.procs[np.argmin(r2_np_x_reverse)].subregion.particles.append(p)
             ### y方向はまたぐ
             elif np.argmin(minimums) == 2:
-                Machine.procs[np.argmin(r2_np_yreverse)].subregion.particles.append(p)
+                Machine.procs[np.argmin(r2_np_y_reverse)].subregion.particles.append(p)
             ### z方向はまたぐ
             elif np.argmin(minimums) == 3:
-                Machine.procs[np.argmin(r2_np_zreverse)].subregion.particles.append(p)
+                Machine.procs[np.argmin(r2_np_z_reverse)].subregion.particles.append(p)
             ### xyともにまたぐ
             elif np.argmin(minimums) == 4:
-                Machine.procs[np.argmin(r2_np_xyreverse)].subregion.particles.append(p)
+                Machine.procs[np.argmin(r2_np_xy_reverse)].subregion.particles.append(p)
             ### yzともにまたぐ
             elif np.argmin(minimums) == 5:
-                Machine.procs[np.argmin(r2_np_yzreverse)].subregion.particles.append(p)
+                Machine.procs[np.argmin(r2_np_yz_reverse)].subregion.particles.append(p)
             ### xzともにまたぐ
             elif np.argmin(minimums) == 6:
-                Machine.procs[np.argmin(r2_np_zxreverse)].subregion.particles.append(p)
+                Machine.procs[np.argmin(r2_np_zx_reverse)].subregion.particles.append(p)
             ### xyzずべてまたぐ
             else:
-                Machine.procs[np.argmin(r2_np_xyzreverse)].subregion.particles.append(p)
+                Machine.procs[np.argmin(r2_np_xyz_reverse)].subregion.particles.append(p)
 
     return Machine
 
@@ -384,7 +398,7 @@ def voronoi_allocate(Machine, bias):
 ### iteration：アルゴリズムの最大繰り返し回数、alpha：biasの変化係数
 ### early_stop_range：繰り返し時のearly stopを、理想値のどれくらいで発動させるか
 def voronoimc(Machine,
-              iteration=600, alpha=0.008, early_stop_range=0.10):
+              iteration=500, alpha=0.008, early_stop_range=0.10):
     ## 各粒子は、最も近い中心点の領域の所属となる。これをそのまま実装している。
     ## preparation
     method_type_name = 'voronoimc'
@@ -441,9 +455,11 @@ def voronoimc(Machine,
         #     for b in bias:
         #         f.write(' {}'.format(b))
         #     f.write('\n')
-        # print('step', s+1, 'count', Machine.count())
-        # if (s+1)%1 == 0:
-        #     plot_fig(Machine, s+1, method_type_name)
+        
+        # if (s+1)%5 == 0:
+            # print('step', s+1, 'count', Machine.count())
+            # plot_fig(Machine, s+1, method_type_name)
+        
         if max(Machine.count()) <= ideal_count_max:
             # print('***Early Stop***')
             break
@@ -453,69 +469,6 @@ def voronoimc(Machine,
         Machine.procs[i].subregion.set_bias(bias[i])
 
     return Machine
-
-
-
-def voronoi2(data, S, cutoff, iteration=50, alpha=0.05):
-    ## method from "R. Koradi et al. Comput. Phys. Commun. 124(2000) 139"
-    ## 各粒子は、最も近い中心点の領域の所属となる。これをそのまま実装している。
-    ## preparation
-    method_type_name = 'voronoi2'
-    print('Iteration =', iteration)
-    S = simple(data, S)   ### 最初は等間隔分割
-    S = voronoi_init(data, S)
-    S.calc_all_center()   ### ボロノイ中心点を計算
-    bias = np.zeros(len(S.Processors))
-
-    ## 1.assigned to the cluster with the closest center
-    ### 後の計算用に、中心点のデータをnumpyにしておく
-    voronoi_allocate(data, S, bias)
-    plot_fig(S, -1, method_type_name)   ### 分割初期状態の図
-    ## 2.bias is initially set to zero
-
-    a = np.zeros(len(S.Processors))   ### 周りの領域の計算負荷（粒子数）保管用配列
-    r = np.zeros(len(S.Processors))   ### 領域半径保管用配列
-    S.calc_all_center()
-    counts = S.count()   ### estimates work-load by using # of particles
-    ## iteration
-    print('step', 0, 'count', S.count())
-
-    for s in range(iteration):
-        S.detect_adjacent(cutoff)
-        for i,p in enumerate(S.Processors):
-            counts = S.count()
-            n = np.array(counts)
-            pmem_np = np.array(p.members)   ### 計算用の所属粒子配列のnumpy
-            ### 中心から最も離れた粒子までの距離が、その領域の半径
-            if not len(pmem_np) == 0:
-                radii2 = (pmem_np[:,0] - p.center[0])**2 + (pmem_np[:,1] - p.center[1])**2
-                r[i] = (radii2[np.argmax(radii2)])**0.5
-            else:
-                r[i] = 0
-            a[i] = average([n[j] for j in range(len(n)) if j in p.neighbors])   ### 周囲の計算負荷の平均
-            ## 3.modifying "bi"
-            bias[i] += alpha*(r[i]**2)*((a[i]/n[i])**(2/3) - 1)
-
-        ## 4.Atoms move to another cluster or stay
-        voronoi_allocate(data, S, bias)
-        ## 5.calculates the new center and the new radius
-        S.calc_all_center()
-        r_new = np.zeros(len(S.Processors))
-        for i,p in enumerate(S.Processors):
-            pmem_np = np.array(p.members)
-            if not len(pmem_np) == 0:
-                radii2 = (pmem_np[:,0] - p.center[0])**2 + (pmem_np[:,1] - p.center[1])**2
-                r[i] = (radii2[np.argmax(radii2)])**0.5
-            else:
-                r[i] = 0
-        ## 6.the modification of the radius requires another adaption of the bias
-        # bias -= (r_new - r)/2
-        
-        #  print('step', s+1, 'bias', bias, 'count', S.count())
-        print('step', s+1, 'count', S.count())
-        if (s+1)%2 == 0:
-            plot_fig(S, s, method_type_name)
-    return S
 
 
 
@@ -538,17 +491,290 @@ def plot_fig(Machine, s, method_type_name):
     plt.xticks([])
     plt.yticks([])
     ax.set_aspect('equal')
-    fgnm = "{}_iteration#{:0=3}.png".format(method_type_name, s+1)
-    plt.title(fgnm)
-    plt.savefig(fgnm)
+    figname = "{}_iteration#{:0=3}.png".format(method_type_name, s+1)
+    plt.title(figname)
+    plt.savefig(figname)
     # plt.show()
     plt.close()
 
 
 
-def ideal(data, cell):
-    N = cell[0]*cell[1]
-    icount = len(data[0])/N
-    return icount
+# Recursive Coordinate Bisectioning
+def rcb(Machine):
+    method_type_name = "rcb"
+
+    Machine.procs[0].subregion.right  = Machine.procs[0].Box.x_max
+    Machine.procs[0].subregion.left   = Machine.procs[0].Box.x_min
+    Machine.procs[0].subregion.back   = Machine.procs[0].Box.y_max
+    Machine.procs[0].subregion.front  = Machine.procs[0].Box.y_min
+    Machine.procs[0].subregion.top    = Machine.procs[0].Box.z_max
+    Machine.procs[0].subregion.bottom = Machine.procs[0].Box.z_min
+    for i in range(1,Machine.np):
+        Machine.procs[0].subregion.particles += Machine.procs[i].subregion.particles
+        Machine.procs[i].subregion.particles.clear()
+    # plot_fig(Machine, -1, method_type_name)
+
+    directions = ["x" for _ in range(Machine.np)]
+    number_of_particles = Machine.procs[0].Box.N
+    for i in range(1,Machine.np):
+        counts_np = np.array(Machine.count())
+        target_j = np.argmax(counts_np)
+        datalist = []
+        for p in Machine.procs[target_j].subregion.particles:
+            datalist.append([p.id, p.x, p.y, p.z, p.vx, p.vy, p.vz])
+        target_data = np.array(datalist)
+
+        # 分割の方向はxyz順番に
+        sorted_index = np.argsort(target_data, axis=0)
+        hi = counts_np[target_j]//2
+        ## x方向のとき
+        if directions[target_j] == "x":
+            border = (target_data[sorted_index[hi,1],1] + target_data[sorted_index[hi+1,1],1])/2
+
+            ### 領域の左側は、空だったプロセスに
+            Machine.procs[i].subregion.right  = border
+            Machine.procs[i].subregion.left   = Machine.procs[target_j].subregion.left
+            Machine.procs[i].subregion.back   = Machine.procs[target_j].subregion.back
+            Machine.procs[i].subregion.front  = Machine.procs[target_j].subregion.front
+            Machine.procs[i].subregion.top    = Machine.procs[target_j].subregion.top
+            Machine.procs[i].subregion.bottom = Machine.procs[target_j].subregion.bottom
+            for jp in range(hi):
+                Machine.procs[i].subregion.particles.append(Machine.procs[target_j].subregion.particles[sorted_index[jp,1]])
+            ### 領域の右側は、もともとのプロセスに
+            Machine.procs[target_j].subregion.left = border
+            new_target_particles = []
+            for jp in range(hi, len(target_data)):
+                new_target_particles.append(Machine.procs[target_j].subregion.particles[sorted_index[jp,1]])
+            Machine.procs[target_j].subregion.particles.clear()
+            Machine.procs[target_j].subregion.particles = new_target_particles
+
+            directions[target_j] = "y"
+            directions[i] = "y"
+        
+        ## y方向のとき
+        elif directions[target_j] == "y":
+            border = (target_data[sorted_index[hi,2],2] + target_data[sorted_index[hi+1,2],2])
+
+            ### 領域の奥側は、空だったプロセスに
+            Machine.procs[i].subregion.back   = Machine.procs[target_j].subregion.back
+            Machine.procs[i].subregion.front  = border
+            Machine.procs[i].subregion.right  = Machine.procs[target_j].subregion.right
+            Machine.procs[i].subregion.left   = Machine.procs[target_j].subregion.left
+            Machine.procs[i].subregion.top    = Machine.procs[target_j].subregion.top
+            Machine.procs[i].subregion.bottom = Machine.procs[target_j].subregion.bottom
+            for jp in range(hi):
+                Machine.procs[i].subregion.particles.append(Machine.procs[target_j].subregion.particles[sorted_index[jp,2]])
+            ### 領域の手前側は、もともとのプロセスに
+            Machine.procs[target_j].subregion.back = border
+            new_target_particles = []
+            for jp in range(hi, len(target_data)):
+                new_target_particles.append(Machine.procs[target_j].subregion.particles[sorted_index[jp,2]])
+            Machine.procs[target_j].subregion.particles.clear()
+            Machine.procs[target_j].subregion.particles = new_target_particles
+
+            directions[target_j] = "z"
+            directions[i] = "z"
+        
+        ## z方向のとき
+        else:
+            border = (target_data[sorted_index[hi,3],3] + target_data[sorted_index[hi+1,3],3])
+
+            ### 領域の上側は、空だったプロセスに
+            Machine.procs[i].subregion.top    = Machine.procs[target_j].subregion.top
+            Machine.procs[i].subregion.bottom = border
+            Machine.procs[i].subregion.right  = Machine.procs[target_j].subregion.right
+            Machine.procs[i].subregion.left   = Machine.procs[target_j].subregion.left
+            Machine.procs[i].subregion.back   = Machine.procs[target_j].subregion.back
+            Machine.procs[i].subregion.front  = Machine.procs[target_j].subregion.front
+            for jp in range(hi):
+                Machine.procs[i].subregion.particles.append(Machine.procs[target_j].subregion.particles[sorted_index[jp,3]])
+            ### 領域の下側は、もともとのプロセスに
+            Machine.procs[target_j].subregion.top = border
+            new_target_particles = []
+            for jp in range(hi, len(target_data)):
+                new_target_particles.append(Machine.procs[target_j].subregion.particles[sorted_index[jp,3]])
+            Machine.procs[target_j].subregion.particles.clear()
+            Machine.procs[target_j].subregion.particles = new_target_particles
+
+            directions[target_j] = "x"
+            directions[i] = "x"
+
+        # print('proc', i, 'count', Machine.count())
+        assert(number_of_particles == sum(Machine.count()))
+        # plot_fig(Machine, i-1, method_type_name)
+
+    return Machine
+
+
+
+def odp_init(Machine):
+    num_cell = Machine.np
+    box = Machine.procs[0].Box
+    # 初期分割
+    lxp = box.xl/num_cell
+    back   = box.y_max
+    front  = box.y_min
+    top    = box.z_max
+    bottom = box.z_min
+    migration_particles = [[] for _ in range(Machine.np)]
+    for i in range(Machine.np):
+        left = i*lxp + box.x_min
+        right = (i+1)*lxp + box.x_min
+        Machine.procs[i].subregion.left   = left
+        Machine.procs[i].subregion.right  = right
+        Machine.procs[i].subregion.back   = back
+        Machine.procs[i].subregion.front  = front
+        Machine.procs[i].subregion.top    = top
+        Machine.procs[i].subregion.bottom = bottom
+        for p in Machine.procs[i].subregion.particles:
+            migration_particles[int((p.x-box.x_min)/lxp)].append(p)
+    for i in range(Machine.np):
+        Machine.procs[i].subregion.particles.clear()
+        Machine.procs[i].subregion.particles = migration_particles[i]
+    assert(sum(Machine.count()) == box.N)
+    return Machine
+
+
+
+def one_d_parallel(Machine, iteration=500, alpha=0.005, early_stop_range=0.02):
+    method_type_name = "one_d_parallel"
+    print("Iteration =", iteration)
+    box = Machine.procs[0].Box
+
+    # plot_fig(Machine, -1, method_type_name)
+    # print("step", 0, "count", Machine.count())
+
+    ideal_count_max = ceil(average(Machine.count())*(1+early_stop_range))
+    for s in range(iteration):
+        counts = Machine.count()
+        for i in range(Machine.np-1):
+            dx = alpha*(counts[i] - counts[i+1])
+            Machine.procs[i].subregion.right  -= dx
+            Machine.procs[i+1].subregion.left -= dx
+
+            left_limit  = (Machine.procs[i].subregion.left + Machine.procs[i].subregion.right)/2
+            right_limit = (Machine.procs[i+1].subregion.left + Machine.procs[i+1].subregion.right)/2
+
+            if Machine.procs[i].subregion.right < left_limit:
+                Machine.procs[i].subregion.right = left_limit 
+                Machine.procs[i+1].subregion.left = left_limit
+            elif Machine.procs[i].subregion.right > right_limit:
+                Machine.procs[i].subregion.right = right_limit
+                Machine.procs[i+1].subregion.left = right_limit
+
+            i_particles = []
+            for p in Machine.procs[i].subregion.particles:
+                if p.x < Machine.procs[i].subregion.left:
+                    Machine.procs[i-1].subregion.particles.append(p)
+                elif p.x > Machine.procs[i].subregion.right:
+                    Machine.procs[i+1].subregion.particles.append(p)
+                else:
+                    i_particles.append(p)
+            Machine.procs[i].subregion.particles.clear()
+            Machine.procs[i].subregion.particles = i_particles
+ 
+        last_particles = []
+        for p in Machine.procs[Machine.np-1].subregion.particles:
+            if p.x < Machine.procs[Machine.np-1].subregion.left:
+                Machine.procs[Machine.np-2].subregion.particles.append(p)
+            else:
+                last_particles.append(p)
+        Machine.procs[Machine.np-1].subregion.particles.clear()
+        Machine.procs[Machine.np-1].subregion.particles = last_particles
+
+        """
+        if (s+1)%5 == 0:
+            print('step', s+1, 'count', Machine.count())
+            plot_fig(Machine, s, method_type_name)
+        """
+    
+        assert(box.N == sum(Machine.count()))
+        if max(Machine.count()) <= ideal_count_max:
+            break
+
+    return Machine
+
+
+
+def sb_init(Machine):
+    box = Machine.procs[0].Box
+    # 初期分割は等間隔
+    Machine = simple(Machine)
+    # ただし、境界の定義だけ変更する
+    for i in range(Machine.np):
+        ip_yz = (i//box.xn)
+        Machine.procs[i].subregion.left  += ip_yz*box.xl - box.x_min
+        Machine.procs[i].subregion.right += ip_yz*box.xl - box.x_min
+        Machine.procs[i].subregion.back   = box.y_max
+        Machine.procs[i].subregion.front  = box.y_min
+        Machine.procs[i].subregion.top    = box.z_max
+        Machine.procs[i].subregion.bottom = box.z_min
+    assert(sum(Machine.count()) == box.N)
+
+    return Machine
+
+
+
+def skew_boundary(Machine, iteration=600, alpha=0.018, early_stop_range=0.02):
+    method_type_name = "skew_boundary"
+    print("Iteration =", iteration)
+    box = Machine.procs[0].Box
+    
+    assert(sum(Machine.count()) == box.N)
+    # plot_fig(Machine, -1, method_type_name)
+    # print("step", 0, "count", Machine.count())
+
+    ideal_count_max = ceil(average(Machine.count())*(1+early_stop_range))
+    for s in range(iteration):
+        counts = Machine.count()
+        for i in range(Machine.np-1):
+            dx = (alpha*(counts[i] - counts[i+1]))**3
+            Machine.procs[i].subregion.right  -= dx
+            Machine.procs[i+1].subregion.left -= dx
+
+            left_limit  = (Machine.procs[i].subregion.left + Machine.procs[i].subregion.right)/2
+            right_limit = (Machine.procs[i+1].subregion.left + Machine.procs[i+1].subregion.right)/2
+
+            if Machine.procs[i].subregion.right < left_limit:
+                Machine.procs[i].subregion.right = left_limit 
+                Machine.procs[i+1].subregion.left = left_limit
+            elif Machine.procs[i].subregion.right > right_limit:
+                Machine.procs[i].subregion.right = right_limit
+                Machine.procs[i+1].subregion.left = right_limit
+
+            i_particles = []
+            for p in Machine.procs[i].subregion.particles:
+                sbx = floor((p.z-box.z_min)/box.sd_zl)*box.yn*box.xl + floor((p.y-box.y_min)/box.sd_yl)*box.xl + p.x-box.x_min
+                if sbx < Machine.procs[i].subregion.left:
+                    Machine.procs[i-1].subregion.particles.append(p)
+                elif sbx > Machine.procs[i].subregion.right:
+                    Machine.procs[i+1].subregion.particles.append(p)
+                else:
+                    i_particles.append(p)
+            Machine.procs[i].subregion.particles.clear()
+            Machine.procs[i].subregion.particles = i_particles
+ 
+        last_particles = []
+        for p in Machine.procs[Machine.np-1].subregion.particles:
+            sbx = floor((p.z-box.z_min)/box.sd_zl)*box.yn*box.xl + floor((p.y-box.y_min)/box.sd_yl)*box.xl + p.x-box.x_min
+            if sbx < Machine.procs[Machine.np-1].subregion.left:
+                Machine.procs[Machine.np-2].subregion.particles.append(p)
+            else:
+                last_particles.append(p)
+        Machine.procs[Machine.np-1].subregion.particles.clear()
+        Machine.procs[Machine.np-1].subregion.particles = last_particles
+
+        """
+        if (s+1)%5 == 0:
+            print('step', s+1, 'count', Machine.count())
+            plot_fig(Machine, s, method_type_name)
+        """
+    
+        assert(box.N == sum(Machine.count()))
+        if max(Machine.count()) <= ideal_count_max:
+            break
+
+    return Machine
+
 
 # ========================================================================================

@@ -24,7 +24,7 @@ class Pair:
 ## ペアリストのメッシュ探索
 ### プロセス並列化しているので、空間分割領域を利用した探索
 ### プロセス数npに関してだけO(np^2)
-### 各SubRegionのcenterとraiusが必要
+### 各SubRegionのcenterとradiusが必要
 class DomainPairList:
     def __init__(self, Machine):
         Box = Machine.procs[0].Box

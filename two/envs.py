@@ -29,7 +29,7 @@ class Process:
     def set_domain_pair_list(self, dpl):
         self.domain_pair_list = dpl
 
-    ### calc_forceによって計算した力積を、他領域に通信するようのメモリに退避させる
+    ### calc_forceによって計算した力積を、他領域に通信する用のメモリに退避させる
     def set_sending_velocity(self, sending_velocities):
         self.sending_velocities = sending_velocities
 

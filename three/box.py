@@ -69,7 +69,6 @@ class SimulationBox:
         self.margin_life -= arg
 
     ### 空間分割の仕方を保存
-    ### この関数ここにいるべきなのか、要検討
     def set_subregion(self, xn, yn, zn, sd_xl, sd_yl, sd_zl):
         self.xn = xn
         self.yn = yn
@@ -81,8 +80,6 @@ class SimulationBox:
 
 
 ## ポテンシャル記述クラス
-### 将来的にはこれを継承したユーザー定義クラスの使用を想定
-### もしくはよく使うポテンシャルクラスを一通り実装しておく
 class Potential:
     epsilon = 4.0
     rho     = 1.0
