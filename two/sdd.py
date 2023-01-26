@@ -427,69 +427,6 @@ def voronoimc(Machine,
 
 
 
-def voronoi2(data, S, cutoff, iteration=50, alpha=0.05):
-    ## method from "R. Koradi et al. Comput. Phys. Commun. 124(2000) 139"
-    ## 各粒子は、最も近い中心点の領域の所属となる。これをそのまま実装している。
-    ## preparation
-    method_type_name = 'voronoi2'
-    print('Iteration =', iteration)
-    S = simple(data, S)   ### 最初は等間隔分割
-    S = voronoi_init(data, S)
-    S.calc_all_center()   ### ボロノイ中心点を計算
-    bias = np.zeros(len(S.Processors))
-
-    ## 1.assigned to the cluster with the closest center
-    ### 後の計算用に、中心点のデータをnumpyにしておく
-    voronoi_allocate(data, S, bias)
-    plot_fig(S, -1, method_type_name)   ### 分割初期状態の図
-    ## 2.bias is initially set to zero
-
-    a = np.zeros(len(S.Processors))   ### 周りの領域の計算負荷（粒子数）保管用配列
-    r = np.zeros(len(S.Processors))   ### 領域半径保管用配列
-    S.calc_all_center()
-    counts = S.count()   ### estimates work-load by using # of particles
-    ## iteration
-    print('step', 0, 'count', S.count())
-
-    for s in range(iteration):
-        S.detect_adjacent(cutoff)
-        for i,p in enumerate(S.Processors):
-            counts = S.count()
-            n = np.array(counts)
-            pmem_np = np.array(p.members)   ### 計算用の所属粒子配列のnumpy
-            ### 中心から最も離れた粒子までの距離が、その領域の半径
-            if not len(pmem_np) == 0:
-                radii2 = (pmem_np[:,0] - p.center[0])**2 + (pmem_np[:,1] - p.center[1])**2
-                r[i] = (radii2[np.argmax(radii2)])**0.5
-            else:
-                r[i] = 0
-            a[i] = average([n[j] for j in range(len(n)) if j in p.neighbors])   ### 周囲の計算負荷の平均
-            ## 3.modifying "bi"
-            bias[i] += alpha*(r[i]**2)*((a[i]/n[i])**(2/3) - 1)
-
-        ## 4.Atoms move to another cluster or stay
-        voronoi_allocate(data, S, bias)
-        ## 5.calculates the new center and the new radius
-        S.calc_all_center()
-        r_new = np.zeros(len(S.Processors))
-        for i,p in enumerate(S.Processors):
-            pmem_np = np.array(p.members)
-            if not len(pmem_np) == 0:
-                radii2 = (pmem_np[:,0] - p.center[0])**2 + (pmem_np[:,1] - p.center[1])**2
-                r[i] = (radii2[np.argmax(radii2)])**0.5
-            else:
-                r[i] = 0
-        ## 6.the modification of the radius requires another adaption of the bias
-        # bias -= (r_new - r)/2
-        
-        #  print('step', s+1, 'bias', bias, 'count', S.count())
-        print('step', s+1, 'count', S.count())
-        if (s+1)%2 == 0:
-            plot_fig(S, s, method_type_name)
-    return S
-
-
-
 def plot_fig(Machine, s, method_type_name):
     fig = plt.figure()
     ax = fig.add_subplot(111)

@@ -162,10 +162,11 @@ def save_file(filename, atoms, rho):
 
 atoms = []
 
-# rho = 0.08
-# add_droplet(atoms)
-# save_file("droplet.atoms", atoms, rho)
+rho = 0.08
+add_droplet(atoms)
+save_file("droplet.atoms", atoms, rho)
 
+atoms = []
 rho = 0.75
 add_bubble(atoms, rho)
 save_file("bubble.atoms", atoms, rho)
