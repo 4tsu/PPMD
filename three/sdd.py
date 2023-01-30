@@ -417,7 +417,6 @@ def voronoimc(Machine,
     for proc in Machine.procs:
         Machine.procs[i].subregion.calc_center(proc.Box)
     counts = Machine.count()   ### estimates work-load by using # of particles
-    # print('step', 0, 'count', Machine.count())
     
     ## iteration
     ### early stopのために、理想的な計算負荷を見積もっておく
@@ -426,10 +425,7 @@ def voronoimc(Machine,
         dpl = sim.DomainPairList(Machine)
         counts = Machine.count()
         n = np.array(counts)
-        # print('---')
-        # print(n)
         for proc_list in dpl.list:
-            # print(len(proc_list))
             for domain_pair in proc_list:
                 i = domain_pair[0]
                 j = domain_pair[1]

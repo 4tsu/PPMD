@@ -322,7 +322,6 @@ def update_position(proc, dt):
         p.x += p.vx * dt
         p.y += p.vy * dt
         p.z += p.vz * dt
-        # p.x, p.y, p.z = proc.Box.periodic_coordinate(p.x, p.y, p.z)
         p.x = box.periodic(p.x, Box.xl, Box.x_min, Box.x_max)
         p.y = box.periodic(p.y, Box.yl, Box.y_min, Box.y_max)
         p.z = box.periodic(p.z, Box.zl, Box.z_min, Box.z_max)

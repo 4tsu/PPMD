@@ -134,7 +134,6 @@ class Machine:
         ### 各領域に格納してある、
         for i, proci in enumerate(self.procs):
             ### 相互作用した粒子について、
-            # print(len(proci.sending_velocities))
             for j, pj in enumerate(proci.sending_velocities):
                 flag = False   ### 正解のペアを見つけたらすぐにループを抜ける用のflag
                 
@@ -147,11 +146,8 @@ class Machine:
                     for l, pl in enumerate(prock.subregion.particles):
                         if pj.id != pl.id:
                             continue
-                        # print('b {:8.6f} {:8.6f}'.format(pl.vx, pl.vy))
-                        # print('j {:8.6f} {:8.6f}'.format(pj.vx, pj.vy))
                         pl.vx += pj.vx
                         pl.vy += pj.vy
-                        # print('a {:8.6f} {:8.6f}'.format(pl.vx, pl.vy))
                         self.procs[k[1]].subregion.particles[l] = pl
                         comms[i,k[1]] = pl.__sizeof__()
                         flag = True
