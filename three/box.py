@@ -13,7 +13,7 @@ random.seed(1)
 # ----------------------------------------------------
 ## シミュレーションボックスを定義するクラス
 ### すべてのプロセスで共有される最低限の情報を持つ
-### lengthsは要素数2の配列[lx,ly]であり、ボックスの寸法を表す
+### lengthsは要素数3の配列[lx,ly,lz]であり、ボックスの寸法を表す
 class SimulationBox:
     def __init__(self, lengths, cutoff, N):
         self.xl = lengths[0]

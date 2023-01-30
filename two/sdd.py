@@ -383,10 +383,7 @@ def voronoimc(Machine,
         dpl = sim.DomainPairList(Machine)
         counts = Machine.count()
         n = np.array(counts)
-        # print('---')
-        # print(n)
         for proc_list in dpl.list:
-            # print(len(proc_list))
             for domain_pair in proc_list:
                 i = domain_pair[0]
                 j = domain_pair[1]
@@ -449,7 +446,6 @@ def plot_fig(Machine, s, method_type_name):
     figname = "{}_iteration#{:0=3}.png".format(method_type_name, s+1)
     plt.title(figname)
     plt.savefig(figname)
-    # plt.show()
     plt.close()
 
 

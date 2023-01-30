@@ -135,17 +135,13 @@ class Machine:
         ### 各領域に格納してある、
         for i, proci in enumerate(self.procs):
             ### 相互作用した粒子について、
-            # print(len(proci.sending_velocities))
             for j, pj in enumerate(proci.sending_velocities):
                 for k, pk in enumerate(self.procs[pj.proc].subregion.particles):
                     if pj.id != pk.id:
                         continue
-                    # print('b {:8.6f} {:8.6f}'.format(pl.vx, pl.vy))
-                    # print('j {:8.6f} {:8.6f}'.format(pj.vx, pj.vy))
                     pk.vx += pj.vx
                     pk.vy += pj.vy
                     pk.vz += pj.vz
-                    # print('a {:8.6f} {:8.6f}'.format(pl.vx, pl.vy))
                     self.procs[pj.proc].subregion.particles[k] = pk
                     comms[i,pj.proc] = pk.__sizeof__()
                     break
